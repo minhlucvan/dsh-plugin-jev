@@ -76,6 +76,17 @@ const FIRST_CHARACTER = 0
 /** Pattern an http(s) base URL must match. */
 const HTTP_URL_PATTERN = /^https?:\/\//u
 
+/** Defaults for the fields the browser settings page can edit. */
+const USER_SETTING_DEFAULTS = {
+  enabled: true,
+  apiKeyEnv: DEFAULT_API_KEY_ENV,
+  model: DEFAULT_MODEL,
+  baseUrl: DEFAULT_BASE_URL,
+  confidenceFloor: DEFAULT_CONFIDENCE_FLOOR,
+  confirmFloor: DEFAULT_CONFIRM_FLOOR,
+  ledgerLimit: DEFAULT_LEDGER_LIMIT,
+} as const
+
 /** Per-tool switches, so a profile can publish only part of the tool face. */
 interface ToolSwitches {
   /** Publish `jev_classify` (Choice). */
@@ -303,6 +314,7 @@ function resolveConfig(config: Config = {}): ResolvedConfig {
 
 export {
   Config,
+  USER_SETTING_DEFAULTS,
   resolveConfig,
   type Config as JevConfig,
   type ResolvedConfig,

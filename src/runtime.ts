@@ -22,6 +22,7 @@ import type { Config, ResolvedConfig } from './config.ts'
 import { isRecord } from './jev/contracts.ts'
 import { createJevService } from './jev/service.ts'
 import type { JevService } from './jev/service.ts'
+import { installUserSettings } from './settings.ts'
 
 /** Service name companions inject to reach the shared Jev instance. */
 const SERVICE_NAME = 'jev'
@@ -35,6 +36,9 @@ const CREDENTIALS_SERVICE = 'credentials'
  */
 const CREDENTIAL_REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/u
 
+/** Builds the credential resolver for one configuration. */
+type CredentialFactory = (config: ResolvedConfig) => () => Promise<string | undefined>
+
 /** Host boundary the plugin uses. */
 interface PluginRuntime {
   /** Publish one informational message through the host. */
@@ -43,6 +47,13 @@ interface PluginRuntime {
   warn: (message: string) => void
   /** The service this plugin provides to its companions. */
   service: JevService
+  /**
+   * Build a credential resolver for a configuration.
+   *
+   * A settings change can rename the credential's variable, so the section
+   * needs a fresh resolver rather than the one built at activation.
+   */
+  credentialFor: CredentialFactory
 }
 
 /** The part of the process environment this plugin reads. */
@@ -194,6 +205,8 @@ function createPluginRuntime(
     warn: (message) => {
       ctx.logger.warn(message)
     },
+    credentialFor: (next: ResolvedConfig): (() => Promise<string | undefined>) =>
+      createCredentialResolver(ctx, next, env).resolve,
     service: createJevService(config, { resolveApiKey: credentials.resolve }),
   }
 }
@@ -214,6 +227,12 @@ function apply(ctx: Context, config: Config): void {
     (): (() => void) => ctx.provide(SERVICE_NAME, runtime.service),
     'jev: service',
   )
+  installUserSettings({
+    ctx,
+    base: resolved,
+    service: runtime.service,
+    credentialFor: runtime.credentialFor,
+  })
   if (resolved.enabled) {
     runtime.info(`dsh-plugin-jev ready: model ${resolved.model} at ${resolved.baseUrl}`)
     return
@@ -230,6 +249,7 @@ export {
   createCredentialResolver,
   createPluginRuntime,
   readApiKey,
+  type CredentialFactory,
   type CredentialProviderLike,
   type CredentialResolver,
   type Environment,

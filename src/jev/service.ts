@@ -102,6 +102,22 @@ interface JevService {
   /** Which tools the profile asked this plugin to publish. */
   readonly tools: JevToolSwitches
   /**
+   * Adopt a configuration that changed while the plugin was running.
+   *
+   * A settings change can rename the credential's variable as well as the
+   * endpoint, so the resolver is replaced together with the configuration
+   * rather than left pointing at the previous name. The ledger and the tool
+   * switches are deliberately not re-derived: usage history is the user's, and
+   * the published catalog is fixed when the fiber mounts.
+   *
+   * @param next - The new effective configuration.
+   * @param credential - Resolver for the new configuration's credential.
+   */
+  reconfigure: (
+    next: JevServiceConfig,
+    credential: () => Promise<string | undefined>,
+  ) => void
+  /**
    * Evaluate one state against one or more questions.
    *
    * @param input - State, questions, and the surface issuing the call.
@@ -178,7 +194,8 @@ function clientOptionsOf(config: JevServiceConfig, deps: JevServiceDeps): JevCli
 function createJevService(config: JevServiceConfig, deps: JevServiceDeps): JevService {
   const ledger: JevUsageLedger = createUsageLedger(config.ledgerLimit)
   const now = deps.now ?? Date.now
-  const client: JevClient = createJevClient(clientOptionsOf(config, deps))
+  let current = config
+  let client: JevClient = createJevClient(clientOptionsOf(current, deps))
   let resolveKey: () => Promise<string | undefined> = async (): Promise<string | undefined> => {
     await Promise.resolve()
     return deps.apiKey ?? ''
@@ -188,16 +205,34 @@ function createJevService(config: JevServiceConfig, deps: JevServiceDeps): JevSe
   }
 
   return {
-    enabled: config.enabled,
-    model: config.model,
-    maxStateChars: config.maxStateChars,
-    tools: config.tools,
-    policy: {
-      confidenceFloor: config.confidenceFloor,
-      confirmFloor: config.confirmFloor,
+    get enabled(): boolean {
+      return current.enabled
+    },
+    get model(): string {
+      return current.model
+    },
+    get maxStateChars(): number {
+      return current.maxStateChars
+    },
+    get tools(): JevToolSwitches {
+      return current.tools
+    },
+    get policy(): JevRoutingPolicy {
+      return {
+        confidenceFloor: current.confidenceFloor,
+        confirmFloor: current.confirmFloor,
+      }
+    },
+    reconfigure(
+      next: JevServiceConfig,
+      credential: () => Promise<string | undefined>,
+    ): void {
+      current = next
+      resolveKey = credential
+      client = createJevClient(clientOptionsOf(current, deps))
     },
     async evaluate(input: JevEvaluateInput): Promise<JevEvaluation> {
-      if (!config.enabled) {
+      if (!current.enabled) {
         throw new JevRequestError(
           'the Jev plugin is mounted with "enabled: false", so no evaluation was sent',
           { code: 'invalid-request', retryable: false },
@@ -206,12 +241,12 @@ function createJevService(config: JevServiceConfig, deps: JevServiceDeps): JevSe
       const apiKey = (await resolveKey()) ?? ''
       if (apiKey === '') {
         throw new JevRequestError(
-          `no TypeSafe API key: "${config.apiKeyEnv}" is unset. Set it in the plugin `
+          `no TypeSafe API key: "${current.apiKeyEnv}" is unset. Set it in the plugin `
           + 'settings, or export it before starting the host.',
           { code: 'invalid-request', retryable: false },
         )
       }
-      const stateChars = measureState(input.state, config.maxStateChars)
+      const stateChars = measureState(input.state, current.maxStateChars)
       assertQuestions(input.questions)
 
       const callOptions: JevEvaluateOptions = { apiKey }
