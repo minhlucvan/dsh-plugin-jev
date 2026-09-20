@@ -15,24 +15,33 @@ over the usage ledger.
 
 ## Start with the honest benchmark
 
-`pnpm run bench` costs the same 17 atomic decisions two ways over a shipped
-corpus. The result is **not** a uniform win, and this README does not pretend
-otherwise:
+`pnpm run bench` costs the same 21 atomic decisions two ways over a shipped
+corpus of five scenarios. The result is **not** a uniform win, and this README
+does not pretend otherwise.
 
 Measured against the live API, both Jev arms, at `--output-weight 4`:
 
 | Shape | Baseline tokens | Jev tokens | Saved |
 | --- | ---: | ---: | ---: |
-| Ad-hoc `jev_ask`, raw tokens | 3,311 | 5,254 | **−58.7%** |
-| Ad-hoc `jev_ask`, output-weighted ×4 | 6,614 | 9,793 | **−48.1%** |
-| Built-in bank, raw tokens | 1,544 | 2,130 | **−38.0%** |
-| Built-in bank, output-weighted ×4 | 2,948 | 2,586 | **+12.3%** |
+| Ad-hoc `jev_ask`, raw tokens | 3,946 | 6,351 | **−60.9%** |
+| Ad-hoc `jev_ask`, output-weighted ×4 | 7,807 | 11,712 | **−50.0%** |
+| Built-in bank, raw tokens | 2,179 | 2,989 | **−37.2%** |
+| Built-in bank, output-weighted ×4 | 4,141 | 3,553 | **+14.2%** |
 
-The modelled run (`pnpm run bench`, no network) reports a larger bank saving —
-28.6% rather than 12.3% — because the four-characters-per-token estimator
-under-counts Jev's real input tokens by roughly a quarter on this corpus. That
-gap is why `--live` exists, and it is why the measured figures are the ones
-printed here. Run both; trust the measured one.
+**The decision rule.** Jev buys back deliberation tokens and pays for them with
+billed input plus the tokens the agent spends restating the evidence. In the
+bank shape those meet at an output weight of **2.7**: above it Jev is cheaper,
+below it Jev is not. Ordinary reasoning models bill generated tokens at four to
+eight times their input rate, so the bank shape is a real saving in practice and
+a loss in principle. The ad-hoc shape **never** breaks even at any output
+weight, because there the agent also generates the questions.
+
+**On the estimator.** The modelled run (`pnpm run bench`, no network) reports a
++32.5% bank saving rather than +14.2%. Four characters per token under-counts
+Jev's billed input by about 1.6× on this corpus — JSON structure and criteria
+prose tokenize worse than English prose does. That gap is why `--live` exists,
+and it is why the measured figures are the ones printed here. Run both; trust
+the measured one.
 
 **When the agent has to restate the evidence inside its tool call, an ad-hoc
 Jev call is not a token saving.** The state is paid for twice — once as the

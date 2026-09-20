@@ -1,13 +1,17 @@
-refactor(benchmark): gather the benchmark into its own folder
+feat(benchmark): add the small-state scenario and the break-even rule
 
-Eight flat src/benchmark-*.ts modules become src/benchmark/{index,corpus,cost,
-estimator,items-routing,items-judgement,live,report}.ts, so the package root
-stops mixing one feature's parts in with the plugin's own entry points.
+The corpus only had scenarios with a large state, so restating the evidence
+always cost more than the deliberation it removed and the report could not say
+where the crossover is. A fifth scenario routes a one-line request through the
+shipped request bank, which is the shape the plugin is actually for.
 
-Cross-directory imports inside the benchmark use the #src/ alias rather than
-../jev/...: the lint config forbids parent-relative imports, and the alias
-resolves through both tsconfig paths and the package imports map without
-weakening that rule. The build inlines it, so no unresolved specifier reaches
-lib/.
+Measured against the live API, that scenario still loses on raw tokens (-35.3%
+in the bank shape) because TypeSafe bills a rubric far above what four
+characters per token predicts. What the data does support is now stated
+exactly: the bank shape breaks even at an output weight of 2.7, above which Jev
+is cheaper, and the ad-hoc shape never breaks even at any weight because the
+agent generates the questions itself.
 
-The live numbers are unchanged by the move.
+The modelled run now also reports the estimator's error against measurement:
+four characters per token under-counts Jev's billed input by about 1.6x on this
+corpus.

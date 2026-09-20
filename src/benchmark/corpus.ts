@@ -15,7 +15,7 @@
 
 import type { JevJson, JevQuestion } from '#src/jev/contracts'
 import { GUARDRAIL, TASK_SHAPE } from './items-judgement.ts'
-import { PULL_REQUEST, SUPPORT_TICKET } from './items-routing.ts'
+import { FRONT_DOOR, PULL_REQUEST, SUPPORT_TICKET } from './items-routing.ts'
 
 /** One piece of classification work, with the reasoning it costs. */
 interface BenchmarkItem {
@@ -47,6 +47,7 @@ const CORPUS: readonly BenchmarkItem[] = [
   PULL_REQUEST,
   GUARDRAIL,
   TASK_SHAPE,
+  FRONT_DOOR,
 ]
 
 /**

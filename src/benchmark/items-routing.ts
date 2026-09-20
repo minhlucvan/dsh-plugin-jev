@@ -9,6 +9,7 @@
  * @module dsh-plugin-jev/benchmark/items-routing
  */
 
+import { REQUEST_BANK } from '#src/jev/catalog'
 import type { BenchmarkItem } from './corpus.ts'
 
 /**
@@ -195,4 +196,44 @@ const PULL_REQUEST: BenchmarkItem = {
   },
 }
 
-export { PULL_REQUEST, SUPPORT_TICKET }
+/**
+ * Front-door routing.
+ *
+ * A one-line request that must be classified before anything is done with it.
+ * The evidence is tiny and the judgement is not, which is the shape where
+ * delegating pays: restating a short state is cheap, and the deliberation it
+ * replaces is not. The questions are the shipped bank's own, so the ad-hoc arm
+ * and the bank arm are asked exactly the same thing.
+ */
+const FRONT_DOOR: BenchmarkItem = {
+  id: 'front-door',
+  title: 'Route a one-line request',
+  state: {
+    request: 'Can you make the export button actually work on staging?',
+    channel: 'chat',
+    from: 'an internal teammate',
+  },
+  questions: REQUEST_BANK.questions,
+  bank: REQUEST_BANK.id,
+  expected: {
+    intent: 'perform_task',
+    planning_depth: 'A few ordered steps whose sequence is obvious',
+    needs_clarification: 'yes',
+  },
+  baselineNotes: {
+    intent:
+      'The phrasing asks for something to be made to work, which is an action carried '
+      + 'out on the requester behalf rather than a question or a plan. So perform_task, '
+      + 'not answer_question and not plan_work.',
+    planning_depth:
+      'There is one deliverable and the path to it is conventional: find the staging '
+      + 'build, reproduce, fix, verify. Nothing here needs sequencing decisions, but it is '
+      + 'not instantaneous either, so it sits in the middle band rather than at either end.',
+    needs_clarification:
+      'The request names a symptom without saying what broken means, which environment '
+      + 'build, or what the button should do. Acting now would mean guessing at all three, '
+      + 'so the answer is yes.',
+  },
+}
+
+export { FRONT_DOOR, PULL_REQUEST, SUPPORT_TICKET }
