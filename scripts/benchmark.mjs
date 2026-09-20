@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 /**
- * Token-savings benchmark CLI.
+ * Benchmark CLI: cost, time, and tokens, with Jev against without.
  *
- * Runs the shipped corpus through the two cost arms and prints the comparison.
  * The default run touches no network; `--live` sends the same corpus to
- * TypeSafe and substitutes the tokens the API actually billed.
+ * TypeSafe and substitutes the tokens and round trips the API actually
+ * reported. Prices default to TypeSafe's published Jev rate and DeepSeek's
+ * published off-peak `deepseek-flash` rates; override them for any other pair.
  *
  * Usage:
  *   node scripts/benchmark.mjs [--live] [--json] [--out <file>]
- *                              [--output-weight <n>] [--system-prompt <n>]
- *                              [--tool-schema <n>] [--trace <file>]
+ *                              [--llm-input-price <usd-per-Mtok>]
+ *                              [--llm-output-price <usd-per-Mtok>]
+ *                              [--jev-input-price <usd-per-Mtok>]
+ *                              [--tokens-per-second <n>]
+ *                              [--jev-latency <seconds>]
+ *                              [--system-prompt <tokens>]
+ *                              [--tool-schema <tokens>]
+ *                              [--trace <file>]
  */
 
 import { readFile, writeFile } from 'node:fs/promises'
@@ -38,21 +45,41 @@ function flagValue(argv, flag) {
 }
 
 /**
- * Read a numeric flag.
+ * Read a numeric flag, accepting fractions so prices work.
  *
  * @param {string[]} argv - Process arguments.
  * @param {string} flag - Flag to look for.
- * @param {number | undefined} fallback - Value used when the flag is absent.
- * @returns {number | undefined} The parsed number.
+ * @param {number} fallback - Value used when the flag is absent.
+ * @returns {number} The parsed number.
  */
 function numberFlag(argv, flag, fallback) {
   const raw = flagValue(argv, flag)
   if (raw === undefined) {
     return fallback
   }
-  const parsed = Number.parseInt(raw, DECIMAL_RADIX)
+  const parsed = Number.parseFloat(raw)
   if (!Number.isFinite(parsed)) {
     throw new Error(CLI_NAME + ': ' + flag + ' needs a number, received ' + raw)
+  }
+  return parsed
+}
+
+/**
+ * Read an integer flag.
+ *
+ * @param {string[]} argv - Process arguments.
+ * @param {string} flag - Flag to look for.
+ * @param {number} fallback - Value used when the flag is absent.
+ * @returns {number} The parsed integer.
+ */
+function intFlag(argv, flag, fallback) {
+  const raw = flagValue(argv, flag)
+  if (raw === undefined) {
+    return fallback
+  }
+  const parsed = Number.parseInt(raw, DECIMAL_RADIX)
+  if (!Number.isFinite(parsed)) {
+    throw new Error(CLI_NAME + ': ' + flag + ' needs an integer, received ' + raw)
   }
   return parsed
 }
@@ -73,16 +100,34 @@ async function loadBenchmark() {
 }
 
 /**
+ * Build the assumptions from the shipped defaults plus any overrides.
+ *
+ * @param {Record<string, number>} defaults - The module's own defaults.
+ * @param {string[]} argv - Process arguments.
+ * @returns {Record<string, number>} The resolved assumptions.
+ */
+function assumptionsFrom(defaults, argv) {
+  return {
+    systemPromptTokens: intFlag(argv, '--system-prompt', defaults.systemPromptTokens),
+    toolSchemaTokens: intFlag(argv, '--tool-schema', defaults.toolSchemaTokens),
+    llmInputPricePerMtok: numberFlag(argv, '--llm-input-price', defaults.llmInputPricePerMtok),
+    llmOutputPricePerMtok: numberFlag(argv, '--llm-output-price', defaults.llmOutputPricePerMtok),
+    jevInputPricePerMtok: numberFlag(argv, '--jev-input-price', defaults.jevInputPricePerMtok),
+    llmTokensPerSecond: numberFlag(argv, '--tokens-per-second', defaults.llmTokensPerSecond),
+    jevLatencySeconds: numberFlag(argv, '--jev-latency', defaults.jevLatencySeconds),
+  }
+}
+
+/**
  * Apply a captured trace file over the corpus's reference reasoning.
  *
- * @param {object} report - Benchmark report to adjust.
+ * @param {object} report - Benchmark report to annotate.
  * @param {string} path - Trace file path.
- * @returns {Promise<object>} The adjusted report.
+ * @returns {Promise<object>} The annotated report.
  */
 async function applyTrace(report, path) {
   const raw = await readFile(path, 'utf8')
-  const trace = JSON.parse(raw)
-  report.trace = trace
+  report.trace = JSON.parse(raw)
   report.traceNote =
     'A captured trace was supplied; re-run the model whose trace this is to reproduce it.'
   return report
@@ -94,16 +139,10 @@ async function applyTrace(report, path) {
 async function main() {
   const argv = process.argv.slice(2)
   const benchmark = await loadBenchmark()
-  const defaults = benchmark.runModelledBenchmark().assumptions
-  const assumptions = {
-    systemPromptTokens: numberFlag(argv, '--system-prompt', defaults.systemPromptTokens),
-    toolSchemaTokens: numberFlag(argv, '--tool-schema', defaults.toolSchemaTokens),
-    completionWeight: numberFlag(argv, '--output-weight', defaults.completionWeight),
-  }
+  const assumptions = assumptionsFrom(benchmark.DEFAULT_ASSUMPTIONS, argv)
 
-  const wantsLive = argv.includes('--live')
   let report
-  if (wantsLive) {
+  if (argv.includes('--live')) {
     const apiKey = (process.env.TYPESAFE_API_KEY ?? '').trim()
     if (apiKey === '') {
       throw new Error(CLI_NAME + ': --live needs TYPESAFE_API_KEY in the environment')
@@ -127,14 +166,15 @@ async function main() {
 
   if (argv.includes('--json')) {
     process.stdout.write(JSON.stringify(report, null, 2) + '\n')
-  } else {
-    const markdown = benchmark.renderReport(report)
-    process.stdout.write(markdown)
-    const out = flagValue(argv, '--out')
-    if (out !== undefined) {
-      await writeFile(out, markdown, 'utf8')
-      process.stdout.write('\nwrote ' + out + '\n')
-    }
+    return
+  }
+
+  const markdown = benchmark.renderReport(report)
+  process.stdout.write(markdown)
+  const out = flagValue(argv, '--out')
+  if (out !== undefined) {
+    await writeFile(out, markdown, 'utf8')
+    process.stdout.write('\nwrote ' + out + '\n')
   }
 }
 

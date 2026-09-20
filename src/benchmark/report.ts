@@ -1,44 +1,31 @@
 /**
- * Rendering and aggregation for the token benchmark. The reading guide is
- * generated from the same assumptions the arithmetic used, so prose and numbers
- * cannot drift apart.
+ * Aggregation for the benchmark.
+ *
+ * The report answers three questions about the same work — what it cost in
+ * dollars, how long it took, and how many tokens moved — because they do not
+ * agree, and the disagreement is the finding.
+ *
+ * A bank covers only the scenarios a shipped bank matches, so its totals are
+ * compared against the baseline over *the same items* rather than against the
+ * whole corpus. Comparing a three-item total to a five-item one would flatter
+ * the bank shape for the wrong reason.
  *
  * @module dsh-plugin-jev/benchmark/report
  */
 
-import {
-  DEFAULT_ASSUMPTIONS,
-  saving,
-} from './cost.ts'
+import { DEFAULT_ASSUMPTIONS, costSaving, saving, timeSaving } from './cost.ts'
 import type { ArmCost, CostAssumptions } from './cost.ts'
 import { countDecisions } from './corpus.ts'
-
-/** Base of the decimal system, used to build a rounding factor. */
-const DECIMAL_BASE = 10
-
-/** Decimal places kept on a percentage, and on a token count. */
-const PERCENT_DIGITS = 1
-const TOKEN_DIGITS = 0
-
-/** Increment applied when one more row has a bank. */
-const ONE_ITEM = 1
-
-/** A percentage of nothing. */
-const NO_PERCENT = 0
-
-/** Scale factor converting a fraction to a percentage. */
-const PERCENT_SCALE = 100
 
 /** Which half of the comparison produced the Jev figures. */
 type BenchmarkMode = 'modelled' | 'measured'
 
-/** An arm cost that has been reduced to a scalar. */
-const EMPTY_ARM: ArmCost = {
-  promptTokens: 0,
-  completionTokens: 0,
-  billedInputTokens: 0,
-  totalTokens: 0,
-  weightedTokens: 0,
+/** A difference between two arms, on one axis. */
+interface Delta {
+  /** Absolute difference in the axis's own unit. */
+  magnitude: number
+  /** Relative difference, as a percentage of the baseline. */
+  percent: number
 }
 
 /** One item's result, side by side. */
@@ -55,10 +42,42 @@ interface BenchmarkRow {
   jev: ArmCost
   /** Cost of answering them with a built-in bank, when one covers the item. */
   jevBank: ArmCost | undefined
-  /** Tokens saved by the ad-hoc call, absolute and relative. */
-  saved: { tokens: number; percent: number }
+  /** Tokens saved by the ad-hoc call. */
+  saved: Delta
   /** Tokens saved by the bank call, when one covers the item. */
-  savedBank: { tokens: number; percent: number } | undefined
+  savedBank: Delta | undefined
+  /** Dollars saved by the ad-hoc call. */
+  costSaved: Delta
+  /** Seconds saved by the ad-hoc call. */
+  timeSaved: Delta
+}
+
+/** One arm reduced to a comparable set of totals. */
+interface ArmTotals {
+  /** Dollars billed across both providers. */
+  usd: number
+  /** Wall-clock seconds. */
+  seconds: number
+  /** Total tokens the comparison counts. */
+  tokens: number
+}
+
+/** A baseline and a Jev arm over the same items. */
+interface Comparison {
+  /** Items the two arms cover. */
+  items: number
+  /** Decisions across those items. */
+  decisions: number
+  /** The arm that reasons in the agent's own context. */
+  baseline: ArmTotals
+  /** The arm that delegates to Jev. */
+  jev: ArmTotals
+  /** Dollars saved. */
+  cost: Delta
+  /** Seconds saved. */
+  time: Delta
+  /** Tokens saved. */
+  tokens: Delta
 }
 
 /** The complete comparison. */
@@ -69,26 +88,27 @@ interface BenchmarkReport {
   assumptions: CostAssumptions
   /** Per-item results. */
   rows: BenchmarkRow[]
-  /** Corpus-wide totals. */
-  totals: {
-    items: number
-    decisions: number
-    baseline: ArmCost
-    jev: ArmCost
-    saved: { tokens: number; percent: number }
-    /** Comparison in provider-weighted tokens at the configured output weight. */
-    weighted: { baseline: number; jev: number; saved: { tokens: number; percent: number } }
-    /** Comparison over only the items a shipped bank covers. */
-    bank: {
-      items: number
-      baseline: ArmCost
-      jev: ArmCost
-      saved: { tokens: number; percent: number }
-      /** The same comparison in provider-weighted tokens. */
-      weighted: { tokens: number; percent: number }
-    }
-  }
+  /** Every scenario, ad-hoc Jev against the baseline. */
+  all: Comparison
+  /** Only the scenarios a shipped bank covers. */
+  bank: Comparison
 }
+
+/** An arm cost that has been reduced to a scalar. */
+const EMPTY_ARM: ArmCost = {
+  promptTokens: 0,
+  completionTokens: 0,
+  billedInputTokens: 0,
+  totalTokens: 0,
+  costUsd: 0,
+  seconds: 0,
+}
+
+/** Count of nothing, used where a total starts empty. */
+const NONE = 0
+
+/** Increment applied when one more row has a bank. */
+const ONE = 1
 
 /**
  * Add two arm costs.
@@ -103,28 +123,46 @@ function addCost(left: ArmCost, right: ArmCost): ArmCost {
     completionTokens: left.completionTokens + right.completionTokens,
     billedInputTokens: left.billedInputTokens + right.billedInputTokens,
     totalTokens: left.totalTokens + right.totalTokens,
-    weightedTokens: left.weightedTokens + right.weightedTokens,
+    costUsd: left.costUsd + right.costUsd,
+    seconds: left.seconds + right.seconds,
   }
 }
 
 /**
- * Compare two arms in provider-weighted tokens, which is the figure that
- * matters commercially: generated tokens are billed above input tokens.
+ * Reduce one arm cost to the three comparable totals.
  *
- * @param baseline - Baseline arm cost.
- * @param jev - Jev arm cost.
- * @returns Weighted tokens saved, absolute and relative.
+ * @param cost - Arm cost to reduce.
+ * @returns The totals.
  */
-function weightedSaving(
-  baseline: ArmCost,
-  jev: ArmCost,
-): { tokens: number; percent: number } {
-  const savedTokens = baseline.weightedTokens - jev.weightedTokens
-  let savedPercent = NO_PERCENT
-  if (baseline.weightedTokens !== NO_PERCENT) {
-    savedPercent = (savedTokens / baseline.weightedTokens) * PERCENT_SCALE
+function totalsOf(cost: ArmCost): ArmTotals {
+  return { usd: cost.costUsd, seconds: cost.seconds, tokens: cost.totalTokens }
+}
+
+/**
+ * Build one comparison from matched baseline and Jev totals.
+ *
+ * @param items - Items the two arms cover.
+ * @param decisions - Decisions across those items.
+ * @param baseline - The baseline arm's cost.
+ * @param jev - The Jev arm's cost.
+ * @returns The comparison.
+ */
+function comparisonOf(
+  scope: { items: number; decisions: number },
+  arms: { baseline: ArmCost; jev: ArmCost },
+): Comparison {
+  const tokenDelta = saving(arms.baseline, arms.jev)
+  const costDelta = costSaving(arms.baseline, arms.jev)
+  const timeDelta = timeSaving(arms.baseline, arms.jev)
+  return {
+    items: scope.items,
+    decisions: scope.decisions,
+    baseline: totalsOf(arms.baseline),
+    jev: totalsOf(arms.jev),
+    cost: { magnitude: costDelta.usd, percent: costDelta.percent },
+    time: { magnitude: timeDelta.seconds, percent: timeDelta.percent },
+    tokens: { magnitude: tokenDelta.tokens, percent: tokenDelta.percent },
   }
-  return { tokens: savedTokens, percent: savedPercent }
 }
 
 /**
@@ -144,13 +182,15 @@ function buildReport(
   let jev = { ...EMPTY_ARM }
   let bankBaseline = { ...EMPTY_ARM }
   let bankJev = { ...EMPTY_ARM }
-  let bankItems = 0
+  let bankItems = NONE
+  let bankDecisions = NONE
 
   for (const row of rows) {
     baseline = addCost(baseline, row.baseline)
     jev = addCost(jev, row.jev)
     if (row.jevBank !== undefined) {
-      bankItems += ONE_ITEM
+      bankItems += ONE
+      bankDecisions += row.decisions
       bankBaseline = addCost(bankBaseline, row.baseline)
       bankJev = addCost(bankJev, row.jevBank)
     }
@@ -160,190 +200,29 @@ function buildReport(
     mode,
     assumptions,
     rows,
-    totals: {
-      items: rows.length,
-      decisions: countDecisions(),
-      baseline,
-      jev,
-      saved: saving(baseline, jev),
-      weighted: {
-        baseline: baseline.weightedTokens,
-        jev: jev.weightedTokens,
-        saved: weightedSaving(baseline, jev),
-      },
-      bank: {
-        items: bankItems,
-        baseline: bankBaseline,
-        jev: bankJev,
-        saved: saving(bankBaseline, bankJev),
-        weighted: weightedSaving(bankBaseline, bankJev),
-      },
-    },
+    all: comparisonOf(
+      { items: rows.length, decisions: countDecisions() },
+      { baseline, jev },
+    ),
+    bank: comparisonOf(
+      { items: bankItems, decisions: bankDecisions },
+      { baseline: bankBaseline, jev: bankJev },
+    ),
   }
-}
-
-/**
- * Round a number for display.
- *
- * @param value - Number to round.
- * @param digits - Decimal places to keep.
- * @returns The rounded number.
- */
-function round(value: number, digits: number): number {
-  const factor = DECIMAL_BASE ** digits
-  return Math.round(value * factor) / factor
-}
-
-/**
- * Format a token count for a table cell.
- *
- * @param value - Token count.
- * @returns The formatted count.
- */
-function tokens(value: number): string {
-  return String(round(value, TOKEN_DIGITS))
-}
-
-/**
- * Format a percentage for a table cell.
- *
- * @param value - Percentage.
- * @returns The formatted percentage.
- */
-function percent(value: number): string {
-  return `${round(value, PERCENT_DIGITS).toFixed(PERCENT_DIGITS)}%`
-}
-
-/**
- * Render one row's bank-mode cells.
- *
- * @param row - Row to render.
- * @returns The two bank columns.
- */
-function bankCells(row: BenchmarkRow): { tokens: string; saved: string } {
-  if (row.jevBank === undefined || row.savedBank === undefined) {
-    return { tokens: '—', saved: '—' }
-  }
-  return { tokens: tokens(row.jevBank.totalTokens), saved: percent(row.savedBank.percent) }
-}
-
-/**
- * Render the main per-item table.
- *
- * @param report - The comparison to render.
- * @returns Markdown table lines.
- */
-function renderMainTable(report: BenchmarkReport): string[] {
-  const lines = [
-    '| Item | Decisions | Baseline | Jev (ask) | Saved | Bank mode | Saved |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
-  ]
-  for (const row of report.rows) {
-    const bank = bankCells(row)
-    lines.push(
-      `| ${row.title} | ${String(row.decisions)} `
-      + `| ${tokens(row.baseline.totalTokens)} `
-      + `| ${tokens(row.jev.totalTokens)} `
-      + `| ${percent(row.saved.percent)} `
-      + `| ${bank.tokens} | ${bank.saved} |`,
-    )
-  }
-  lines.push(
-    `| **All ${String(report.totals.items)} items** | **${String(report.totals.decisions)}** `
-    + `| **${tokens(report.totals.baseline.totalTokens)}** `
-    + `| **${tokens(report.totals.jev.totalTokens)}** `
-    + `| **${percent(report.totals.saved.percent)}** `
-    + `| **${tokens(report.totals.bank.jev.totalTokens)}** `
-    + `| **${percent(report.totals.bank.saved.percent)}** |`,
-  )
-  return lines
-}
-
-/**
- * Render the reading guide and the method note.
- *
- * @param report - The comparison to render.
- * @returns Markdown lines.
- */
-function renderNotes(report: BenchmarkReport): string[] {
-  const { assumptions, totals } = report
-  let modeNote = 'Jev input tokens are estimated with the same estimator as the baseline.'
-  if (report.mode === 'measured') {
-    modeNote = 'Jev input tokens are the ones the API reported in usage.input_tokens.'
-  }
-  return [
-    '## Reading this',
-    '',
-    `- Mode: **${report.mode}**. ${modeNote}`,
-    `- Bank mode covers the ${String(totals.bank.items)} items a shipped question bank matches; `
-    + 'a dash means no bank covers that item.',
-    `- Raw tokens: baseline ${tokens(totals.baseline.totalTokens)}, `
-    + `Jev ${tokens(totals.jev.totalTokens)} (${percent(totals.saved.percent)}).`,
-    `- Weighted at an output multiplier of ${String(assumptions.completionWeight)}: `
-    + `baseline ${tokens(totals.weighted.baseline)}, Jev ${tokens(totals.weighted.jev)} `
-    + `(${percent(totals.weighted.saved.percent)}). Raise --output-weight to model a provider `
-    + 'that bills generated tokens above its input rate, which is what a reasoning model does.',
-    `- Bank mode, weighted the same way: baseline ${tokens(totals.bank.baseline.weightedTokens)}, `
-    + `Jev ${tokens(totals.bank.jev.weightedTokens)} `
-    + `(${percent(totals.bank.weighted.percent)}). This is the call shape to prefer when the `
-    + 'token bill is what is being optimised.',
-    '',
-    '## How the arms are counted',
-    '',
-    `- **Baseline** — the agent reads the instruction block (${String(assumptions.systemPromptTokens)} `
-    + 'tokens), the question definitions and the state, then writes its reasoning and the '
-    + 'answer block.',
-    '- **Jev (ask)** — the agent writes a tool call carrying the state and the full question '
-    + 'definitions, Jev bills the state once and evaluates every question in parallel, and the '
-    + 'agent reads one short line per decision. TypeSafe bills input tokens only.',
-    '- **Jev (bank)** — the same, except the agent sends a bank id instead of the question '
-    + 'definitions, so the rubrics never enter its completion.',
-    `- The Jev tool catalog costs the agent ${String(assumptions.toolSchemaTokens)} prompt tokens, `
-    + 'counted against Jev in every row.',
-    '',
-    '## What is measured and what is modelled',
-    '',
-    'The baseline half is **modelled** from the reference reasoning shipped in the corpus; read',
-    'it and judge it for yourself. The Jev half is **measured** in --live mode and modelled',
-    'otherwise. The estimator is four characters per token, applied identically to both arms, so',
-    'the ratio is more meaningful than the absolute figures.',
-    '',
-    'The honest headline: when the agent must restate the evidence inside its tool call, an',
-    'ad-hoc Jev call is not automatically a raw-token win, because the state is paid for twice.',
-    'The savings that do hold up are the built-in bank shape, the provider-weighted comparison,',
-    'and the round trips Jev removes.',
-    '',
-  ]
-}
-
-/**
- * Render the comparison as a markdown report.
- *
- * @param report - The comparison to render.
- * @returns Markdown text suitable for a README or a terminal.
- */
-function renderReport(report: BenchmarkReport): string {
-  return [
-    '# Jev token benchmark',
-    '',
-    ...renderMainTable(report),
-    '',
-    ...renderNotes(report),
-  ].join('\n')
 }
 
 export {
   EMPTY_ARM,
+  NONE,
   addCost,
   buildReport,
-  percent,
-  renderMainTable,
-  renderNotes,
-  renderReport,
-  round,
-  tokens,
+  comparisonOf,
+  totalsOf,
+  type ArmTotals,
   type BenchmarkMode,
   type BenchmarkReport,
   type BenchmarkRow,
+  type Comparison,
+  type Delta,
 }
 

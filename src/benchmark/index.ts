@@ -1,19 +1,15 @@
 /**
- * The token benchmark.
+ * The Jev benchmark: cost, time, and tokens.
  *
- * Two ways to answer the same atomic questions about the same state are costed
- * side by side, and the report says which half of the comparison was measured
- * and which was modelled. That distinction is the whole reason this module
- * exists rather than a paragraph of prose: a savings claim that cannot be
- * re-run is marketing, and this one is reproducible from the repository.
+ * Two ways to answer the same atomic questions about the same state are priced,
+ * timed and counted side by side. The report says which half of the comparison
+ * was measured and which was modelled, because a savings claim that cannot be
+ * re-run is marketing.
  *
- * The result is not uniformly flattering, and the report says so. When the
- * agent has to restate the evidence inside its tool call, an ad-hoc Jev call
- * can cost more raw tokens than reasoning in context, because the state is paid
- * for twice. The comparison is therefore reported three ways: raw tokens,
- * tokens weighted by what providers charge for generated text, and the
- * built-in-bank call shape, which moves the question definitions out of the
- * model's completion entirely.
+ * The three axes do not agree, and that is the point. Jev bills input only, at
+ * a price an order of magnitude below a chat model, and produces no
+ * deliberation; a reasoning model bills both sides and spends its time writing
+ * the deliberation Jev does not write.
  *
  * @module dsh-plugin-jev/benchmark
  */
@@ -21,10 +17,12 @@
 import {
   DEFAULT_ASSUMPTIONS,
   baselineCost,
+  costSaving,
   jevBankCost,
   jevMeasuredCost,
   jevModelledCost,
   saving,
+  timeSaving,
 } from './cost.ts'
 import type { CostAssumptions } from './cost.ts'
 import { CORPUS } from './corpus.ts'
@@ -32,14 +30,29 @@ import type { BenchmarkItem } from './corpus.ts'
 import { measureItems } from './live.ts'
 import type { LiveOptions } from './live.ts'
 import { buildReport } from './report.ts'
-import type { BenchmarkReport, BenchmarkRow } from './report.ts'
+import type { BenchmarkReport, BenchmarkRow, Delta } from './report.ts'
 
 /** What the API reported for one item, when a live run supplied it. */
 interface MeasuredUsage {
   /** Tokens billed for the ad-hoc request. */
   inputTokens: number
+  /** Ad-hoc round trip in seconds. */
+  latencySeconds: number
   /** Tokens billed for the bank request, when a bank covers the item. */
   bankInputTokens: number | undefined
+  /** Bank round trip in seconds, when a bank covers the item. */
+  bankLatencySeconds: number | undefined
+}
+
+/**
+ * Present one pair of magnitudes as a delta.
+ *
+ * @param magnitude - Absolute difference in the axis's own unit.
+ * @param percent - Relative difference.
+ * @returns The delta.
+ */
+function deltaOf(magnitude: number, percent: number): Delta {
+  return { magnitude, percent }
 }
 
 /**
@@ -56,18 +69,33 @@ function buildRows(
   return CORPUS.map((item: BenchmarkItem): BenchmarkRow => {
     const baseline = baselineCost(item, assumptions)
     const live = measured.get(item.id)
+
     let jev = jevModelledCost(item, assumptions)
     if (live !== undefined) {
-      jev = jevMeasuredCost(item, live.inputTokens, assumptions)
+      jev = jevMeasuredCost(
+        item,
+        { billedInputTokens: live.inputTokens, latencySeconds: live.latencySeconds },
+        assumptions,
+      )
     }
+
     let bank = jevBankCost(item, assumptions)
     if (live?.bankInputTokens !== undefined) {
-      bank = jevBankCost(item, assumptions, live.bankInputTokens)
+      bank = jevBankCost(item, assumptions, {
+        billedInputTokens: live.bankInputTokens,
+        latencySeconds: live.bankLatencySeconds,
+      })
     }
-    let savedBank: { tokens: number; percent: number } | undefined = undefined
+
+    const tokenDelta = saving(baseline, jev)
+    const costDelta = costSaving(baseline, jev)
+    const timeDelta = timeSaving(baseline, jev)
+    let savedBank: Delta | undefined = undefined
     if (bank !== undefined) {
-      savedBank = saving(baseline, bank)
+      const bankDelta = saving(baseline, bank)
+      savedBank = deltaOf(bankDelta.tokens, bankDelta.percent)
     }
+
     return {
       id: item.id,
       title: item.title,
@@ -75,8 +103,10 @@ function buildRows(
       baseline,
       jev,
       jevBank: bank,
-      saved: saving(baseline, jev),
+      saved: deltaOf(tokenDelta.tokens, tokenDelta.percent),
       savedBank,
+      costSaved: deltaOf(costDelta.usd, costDelta.percent),
+      timeSaved: deltaOf(timeDelta.seconds, timeDelta.percent),
     }
   })
 }
@@ -123,23 +153,29 @@ async function runLiveBenchmark(
   for (const measurement of measurements) {
     byId.set(measurement.itemId, {
       inputTokens: measurement.billedInputTokens,
+      latencySeconds: measurement.latencySeconds,
       bankInputTokens: measurement.bankInputTokens,
+      bankLatencySeconds: measurement.bankLatencySeconds,
     })
   }
   return buildReport(buildRows(assumptions, byId), assumptions, 'measured')
 }
 
 export { DEFAULT_ASSUMPTIONS } from './cost.ts'
-export type { ArmCost, CostAssumptions } from './cost.ts'
+export type { ArmCost, CostAssumptions, MeasuredJev } from './cost.ts'
 export { CORPUS, countDecisions, getItem } from './corpus.ts'
 export type { BenchmarkItem } from './corpus.ts'
 export { measureItems } from './live.ts'
 export type { LiveMeasurement, LiveOptions } from './live.ts'
-export {
-  buildReport,
-  renderReport,
-  round,
+export { buildReport } from './report.ts'
+export type {
+  ArmTotals,
+  BenchmarkMode,
+  BenchmarkReport,
+  BenchmarkRow,
+  Comparison,
+  Delta,
 } from './report.ts'
-export type { BenchmarkMode, BenchmarkReport, BenchmarkRow } from './report.ts'
+export { renderReport } from './render.ts'
 export { benchmarkSource, buildRows, runLiveBenchmark, runModelledBenchmark }
 

@@ -100,54 +100,80 @@ at startup instead. Set `enabled: false` to mount it with no credential at all.
 
 ---
 
-## Cost: with Jev vs without
+## Cost and time: with Jev vs without
 
-The same 21 atomic decisions, across five scenarios, answered both ways against
-the live API at `--output-weight 4`:
+**Token counts answer the wrong question, and they answer it backwards.** Jev
+bills input only, at a price an order of magnitude below a chat model, and it
+writes no deliberation. A reasoning model bills both sides and spends its time
+writing the deliberation Jev does not write. Counted in tokens the bank shape
+loses; counted in dollars and seconds it wins by about half.
 
-| Shape | Without Jev | With Jev | Δ |
+The same 20 atomic decisions across five scenarios, measured against the live
+API.
+
+**Every scenario, ad-hoc questions**
+
+| | Cost | Time | Tokens |
 | --- | ---: | ---: | ---: |
-| Ad-hoc `jev_ask`, raw tokens | 3,946 | 6,351 | **−60.9%** |
-| Ad-hoc `jev_ask`, output-weighted ×4 | 7,807 | 11,712 | **−50.0%** |
-| `jev_reason` with a built-in bank, raw tokens | 2,179 | 2,989 | −37.2% |
-| `jev_reason` with a built-in bank, output-weighted ×4 | 4,141 | 3,553 | **+14.2%** |
+| Without Jev | $0.001171 | 25.7s | 3,946 |
+| With Jev | $0.001413 | 40.7s | 6,351 |
+| **Jev vs without** | **−20.7%** | **−58.2%** | **−60.9%** |
 
-**Read the last line, not the first.** Jev buys back deliberation tokens and pays
-for them with billed input plus the tokens the agent spends restating the
-evidence. In the bank shape those meet at an output weight of **2.7**: above it
-Jev is cheaper, below it Jev is not. Reasoning models bill generated tokens at
-roughly four to eight times their input rate, so the bank shape saves in practice
-even though it loses on a raw count.
+**Only what a shipped bank covers** — 3 scenarios, 11 decisions, sent as a bank
+id instead of question text
 
-The ad-hoc shape **never** breaks even at any output weight, because there the
-agent also generates the question definitions. Use `jev_reason`. Do not use
-`jev_ask` to ask about a large document.
+| | Cost | Time | Tokens |
+| --- | ---: | ---: | ---: |
+| Without Jev | $0.000621 | 13.1s | 2,179 |
+| With Jev | $0.000319 | 4.8s | 2,989 |
+| **Jev vs without** | **+48.7%** | **+63.3%** | **−37.2%** |
+
+Positive is better for Jev on every axis.
+
+### The rule
+
+**Use the bank tool. Do not use the ad-hoc one on a large state.** In the bank
+shape the agent sends the state and a bank id, so the question definitions never
+enter its completion — and a completion token is the expensive one, both to buy
+and to wait for. That is worth **49% of the bill and 63% of the wall clock**,
+even though Jev bills 37% *more* tokens to do it, because Jev's tokens cost
+**$0.042/Mtok against $0.15–0.60** for the agent model, and Jev's output is free.
+
+Ad-hoc questions invert all three axes: the agent now writes the state and the
+question text itself, so it is slower *and* dearer than reasoning in context.
+
+### Prices used
+
+| | Input | Output |
+| --- | ---: | ---: |
+| Jev | $0.042 / Mtok | free |
+| Agent model (DeepSeek Flash, off-peak) | $0.15 / Mtok | $0.60 / Mtok |
+
+Peak hours double the DeepSeek rates and leave Jev's unchanged, which moves the
+comparison further in Jev's favour. Every one of them is a flag:
+--llm-input-price, --llm-output-price, --jev-input-price, --tokens-per-second,
+--jev-latency.
 
 ### What is measured, and what is modelled
 
-The Jev half is **measured**: `--live` sends the corpus to the API and uses the
-`usage.input_tokens` it reports. The baseline half is **modelled** from reference
-reasoning shipped as data in `src/benchmark/items-routing.ts` and
-`src/benchmark/items-judgement.ts` — read it, disagree with it, replace it with
-`--trace <file>`, and re-run.
-
-The modelled run reports a **+32.5%** bank saving rather than **+14.2%**, because
-four characters per token under-counts Jev's billed input by about **1.6×** on
-this corpus: JSON structure and criteria prose tokenize worse than English prose
-does. That gap is why `--live` exists, and why the measured figures are the ones
-printed here. Run both; trust the measured one.
+Jev's tokens **and round trips** are measured by --live. The baseline is
+**modelled** from reference reasoning shipped as data in
+src/benchmark/items-routing.ts and src/benchmark/items-judgement.ts — read it,
+disagree with it, replace it with --trace <file>, and re-run. Time is generated
+tokens divided by --tokens-per-second (default 50) plus the Jev round trip; that
+throughput figure is the assumption most worth checking against your own
+deployment.
 
 ### Run it
 
 ```sh
 pnpm run build:host
-pnpm run bench                                       # modelled, instant, no network
-TYPESAFE_API_KEY=... pnpm run bench:live -- --output-weight 4
-pnpm run bench -- --json | jq .totals
+pnpm run bench                                   # modelled, instant, no network
+TYPESAFE_API_KEY=... pnpm run bench:live
+pnpm run bench -- --json | jq .bank
+# a different model, or a peak-hour comparison:
+pnpm run bench -- --llm-input-price 0.30 --llm-output-price 1.20
 ```
-
-Flags: `--live`, `--json`, `--out <file>`, `--output-weight <n>`,
-`--system-prompt <n>`, `--tool-schema <n>`, `--trace <file>`.
 
 ### Cost inside a running session
 
