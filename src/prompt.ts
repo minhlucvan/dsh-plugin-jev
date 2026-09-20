@@ -3,13 +3,16 @@
  *
  * A tool description tells the model what a tool does. It does not tell the
  * model to *prefer* it, and a model that has reasoned its way through thousands
- * of classifications in its own context will keep doing that by default. This
- * section is the nudge: it states the economics — a typed decision costs a
- * fraction of a reasoning pass and returns in one round trip — and names the
- * shapes that should be delegated rather than reasoned about.
+ * of classifications in its own context will keep doing that by default.
  *
- * It sits in every system prompt, so it is written to be worth its tokens and
- * is one switch away from being removed.
+ * TypeSafe's own guidance is that System One is for AI-powered software rather
+ * than for agents: code owns the control flow, and the model is asked only for
+ * narrow judgements over unstructured input. This section is that doctrine put
+ * where the agent will read it — decompose before asking, ask everything about
+ * one state at once, act on the route, and keep the work.
+ *
+ * It sits in every system prompt, so it is written to be worth its tokens and is
+ * one switch away from being removed.
  *
  * @module dsh-plugin-jev/prompt
  */
@@ -123,45 +126,65 @@ function getJevService(ctx: Context): JevService {
 /**
  * Build the guidance text.
  *
- * Written in the imperative and in the order the model needs it: the principle,
- * the shapes worth delegating, the batching rule, how to read the answer, and
- * the cases where delegating is the wrong call.
+ * Written in the imperative and in the order the model needs it: the division of
+ * labour, how to decompose, which call shape to prefer, how to read the answer,
+ * and what stays with the agent.
  *
  * @param service - The plugin service, for the model the profile configured.
  * @returns The section text.
  */
 function buildGuidance(service: JevService): string {
+  const opener =
+    `TypeSafe System One (${service.model}) answers typed questions about a state and`
   const lines: string[] = [
-    '## Delegate a decision instead of reasoning it out',
+    '## Delegate the judgement, keep the work',
     '',
-    `TypeSafe Jev (${service.model}) answers typed questions about a state and returns a`,
-    'typed decision with a calibrated confidence. It writes no deliberation, so a',
-    'narrow judgement costs a fraction of a reasoning pass and comes back in one',
-    'round trip. When a decision resolves to one of a known set of answers, prefer',
-    'delegating it over working it out in your own context.',
+    opener,
+    'returns a typed decision with a calibrated confidence. It writes no',
+    'deliberation, so a narrow judgement costs a fraction of a reasoning pass and',
+    'returns in about a tenth of a second. You decide what to do; it decides what',
+    'is true.',
     '',
-    'Reach for a Jev tool first when:',
+    '### Ask the narrow question, not the broad one',
     '',
-    '- the answer is one option from a list you can name — `jev_classify`;',
-    '- the answer is a position on a scale you can describe — `jev_score`;',
-    '- the answer is yes or no and the probability itself is the signal — `jev_check`;',
-    '- the shape of the task is unclear and you want it named before starting — `jev_reason`.',
+    'A System One model is reliable on a judgement a knowledgeable reader could',
+    'make in a second, and unreliable on "think about this". Decompose. Rather',
+    'than asking whether a change is risky, ask how far its effects reach, whether',
+    'it needs a migration, and how hard it must be checked — then combine those',
+    'yourself. Each factor becomes something you can see, question, and re-weight.',
     '',
-    'Prefer a shipped `jev_reason` bank over `jev_ask`. A bank keeps the question',
-    'definitions out of your own output, and generated tokens are the expensive',
-    'ones — that is the difference between delegating being cheaper and being',
-    'dearer than reasoning it out.',
+    '`jev_classify` answers one option from a list, `jev_score` a position on a',
+    'scale, and `jev_check` a yes or no whose probability is itself the signal.',
     '',
-    'Ask every question you need about one state in a single call: they are',
-    'evaluated in parallel and the state is billed once.',
+    '### Prefer a shipped bank',
     '',
-    'Read the `route` that comes back, not only the answer. `act` means proceed;',
-    '`verify` means confirm before anything hard to undo; `escalate` means do not act',
-    'on it — ask, or gather the evidence it is missing.',
+    '`jev_reason` runs a bank of atomic questions written for a recurring decision:',
+    'the shape of a task, the triage of a failure, a change before review. A bank',
+    'keeps the question definitions out of your own output, and generated tokens',
+    'are the expensive ones. Reach for `jev_ask` when the decision is genuinely',
+    'yours to define, and `jev_compare` when the question is which of several',
+    'candidates is best.',
     '',
-    'Do the work yourself when the answer needs a tool, a file, arithmetic, or',
-    'extended reasoning over several interacting factors. Decompose those into',
-    'atomic questions rather than asking one broad one.',
+    '### Ask everything about one state at once',
+    '',
+    'Questions are evaluated in parallel against the same state and the state is',
+    'billed once. One call carrying five questions costs barely more than one',
+    'carrying one, and no answer becomes hidden context for another.',
+    '',
+    '### Act on the route, not only the answer',
+    '',
+    'Every answer carries a `route`. `act` means proceed. `verify` means the answer',
+    'is probably right but the stakes are high — confirm that specific point',
+    'before doing anything hard to undo. `escalate` means do not act on it: ask, or',
+    'gather the evidence it says is missing. Pass risk "high" for destructive or',
+    'irreversible actions; that raises the bar before a route becomes `act`.',
+    '',
+    '### Keep the work yourself',
+    '',
+    'Reading files, running tests, editing, arithmetic and anything with a side',
+    'effect stay with you. So does the final call when a decision is genuinely',
+    'multi-factor — System One supplies the factors, weighted how you choose, and',
+    'it never picks your next action for you.',
   ]
   return lines.join('\n')
 }
@@ -191,4 +214,3 @@ function apply(ctx: Context): void {
 }
 
 export { SECTION_NAME, SECTION_ORDER, apply, buildGuidance, inject, name }
-

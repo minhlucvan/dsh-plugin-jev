@@ -95,7 +95,7 @@ function testGuidanceSaysWhatTheModelNeeds(): void {
   const text = buildGuidance(createTestService({}))
   expect(text).toContain('jev_classify')
   expect(text).toContain('jev_reason')
-  expect(text).toContain('single call')
+  expect(text).toContain('parallel')
   expect(text).toContain('route')
 }
 

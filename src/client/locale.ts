@@ -17,8 +17,8 @@ const LOCALE_NAMESPACE = 'dsh-plugin-jev'
 
 /** The reference dictionary. Every other language must cover its key set. */
 const en = {
-  nav: 'Jev',
-  heading: 'Jev settings',
+  nav: 'System One',
+  heading: 'System One settings',
   description:
     'Typed, calibrated decisions from TypeSafe System One, and the token accounting they cost.',
   tabApiKey: 'API key',
@@ -112,8 +112,8 @@ type MessageKey = keyof typeof en
  * build rather than shipping a missing string.
  */
 const zh: Record<MessageKey, string> = {
-  nav: 'Jev',
-  heading: 'Jev 设置',
+  nav: 'System One',
+  heading: 'System One 设置',
   description: '来自 TypeSafe System One 的类型化决策，以及它们消耗的 token 账目。',
   tabApiKey: 'API 密钥',
   tabBehavior: '行为',
