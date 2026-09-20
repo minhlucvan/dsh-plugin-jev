@@ -164,7 +164,7 @@ function fakeScope(): SettingsScope<ClientSettings> {
  * @returns The testing-library render result.
  */
 function renderPage(credentials: CredentialApi): ReturnType<typeof render> {
-  return render(
+  const view = render(
     <SettingsPage
       scope={fakeScope()}
       translate={translate}
@@ -172,6 +172,9 @@ function renderPage(credentials: CredentialApi): ReturnType<typeof render> {
       credentials={credentials}
     />,
   )
+  /* The key lives in its own tab, so open it before reading the field. */
+  fireEvent.click(screen.getByRole('tab', { name: 'tabCredential' }))
+  return view
 }
 
 /**
@@ -256,9 +259,15 @@ async function testTheReferenceFollowsTheApiKeyEnvField(): Promise<void> {
     expect(credentials.described).toStrictEqual([REFERENCE])
   })
 
+  /*
+   * The variable name is edited on the Settings tab, so the key field is
+   * unmounted while it changes and re-reads the reference when it comes back.
+   */
+  fireEvent.click(screen.getByRole('tab', { name: 'tabSettings' }))
   fireEvent.change(input('apiKeyEnvLabel'), {
     target: { value: OTHER_REFERENCE },
   })
+  fireEvent.click(screen.getByRole('tab', { name: 'tabCredential' }))
   await waitFor(() => {
     expect(credentials.described).toContain(OTHER_REFERENCE)
   })

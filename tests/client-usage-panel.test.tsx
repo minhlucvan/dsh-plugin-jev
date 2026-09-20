@@ -123,7 +123,7 @@ function fakeScope(): SettingsScope<ClientSettings> {
  * @returns The testing-library render result.
  */
 function renderPage(api: UsageApi): ReturnType<typeof render> {
-  return render(
+  const view = render(
     <SettingsPage
       scope={fakeScope()}
       translate={translate}
@@ -131,6 +131,9 @@ function renderPage(api: UsageApi): ReturnType<typeof render> {
       credentials={NO_CREDENTIALS}
     />,
   )
+  /* The ledger lives in its own tab, and is not read until it is opened. */
+  fireEvent.click(screen.getByRole('tab', { name: 'tabUsage' }))
+  return view
 }
 
 /**
@@ -174,7 +177,9 @@ async function testPanelReportsAFailedReadWithoutThrowing(): Promise<void> {
   const alert = await screen.findByRole('alert')
   expect(alert.textContent).toContain('usageFailed')
   expect(alert.textContent).toContain('ledger offline')
-  // The page around the panel is untouched by the failure.
+  // The rest of the page is untouched by the failure.
+  // The form still holds its persisted value when the user switches back.
+  fireEvent.click(screen.getByRole('tab', { name: 'tabSettings' }))
   expect(input('modelLabel').value).toBe(defaultSettings.model)
 }
 

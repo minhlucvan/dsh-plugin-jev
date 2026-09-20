@@ -1,11 +1,10 @@
 /**
  * The settings section: layout only.
  *
- * It composes the form, the API-key field, the commit controls and the usage
- * panel, and owns nothing else — no state, no effects, no store access. Its
- * children read the stores through hooks, which is what keeps this file stable
- * as the form grows: adding a field is a change to the fields, not to the
- * section.
+ * It composes the three tabs — configuration, the API key, and the ledger — and
+ * owns nothing else: no state, no effects, no store access. Its children read
+ * the stores through hooks, which is what keeps this file stable as the panel
+ * grows: adding a field is a change to the fields, not to the section.
  *
  * Structure and class names only. Every rule lives in `styles.ts`, so the
  * markup here reads as an outline of the panel.
@@ -18,6 +17,8 @@ import type { ReactElement } from 'react'
 import { CredentialField } from './credential-field.tsx'
 import { SaveControls } from './save-controls.tsx'
 import { SettingsFields } from './settings-fields.tsx'
+import { SettingsTabs } from './tabs.tsx'
+import type { SettingsTab } from './tabs.tsx'
 import type { Translate } from './translate.ts'
 import { UsagePanel } from './usage-panel.tsx'
 
@@ -25,6 +26,41 @@ import { UsagePanel } from './usage-panel.tsx'
 interface SettingsSectionProps {
   /** Translator bound to this feature's namespace. */
   translate: Translate
+}
+
+/**
+ * Build the tabs this section shows.
+ *
+ * The key sits in its own tab rather than under the form because it has its own
+ * save action: two buttons labelled Save on one screen is a question the user
+ * should not have to answer.
+ *
+ * @param translate - Translator bound to this feature's namespace.
+ * @returns The tabs, in display order.
+ */
+function tabsOf(translate: Translate): SettingsTab[] {
+  return [
+    {
+      id: 'settings',
+      label: translate('tabSettings'),
+      content: (
+        <div className='jev-group__fields'>
+          <SettingsFields translate={translate} />
+          <SaveControls translate={translate} />
+        </div>
+      ),
+    },
+    {
+      id: 'credential',
+      label: translate('tabCredential'),
+      content: <CredentialField translate={translate} />,
+    },
+    {
+      id: 'usage',
+      label: translate('tabUsage'),
+      content: <UsagePanel translate={translate} />,
+    },
+  ]
 }
 
 /**
@@ -40,15 +76,10 @@ function SettingsSection({ translate }: SettingsSectionProps): ReactElement {
         <h2 className='jev__title'>{translate('heading')}</h2>
         <p className='jev__intro'>{translate('description')}</p>
       </header>
-      <div className='jev-group__fields'>
-        <SettingsFields translate={translate} />
-      </div>
-      <CredentialField translate={translate} />
-      <SaveControls translate={translate} />
-      <UsagePanel translate={translate} />
+      <SettingsTabs tabs={tabsOf(translate)} />
     </section>
   )
 }
 
-export { SettingsSection, type SettingsSectionProps }
+export { SettingsSection, tabsOf, type SettingsSectionProps }
 
