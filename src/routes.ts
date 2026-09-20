@@ -13,7 +13,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import type { Context } from '@deepseek-ai/cordis'
 
-import { BANKS } from './jev/catalog.ts'
+import { BANKS } from './jev/catalog/index.ts'
 import { isRecord } from './jev/contracts.ts'
 import type { JevService } from './jev/service.ts'
 

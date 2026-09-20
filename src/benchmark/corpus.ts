@@ -1,21 +1,22 @@
 /**
- * The benchmark corpus: real classification work, with the reasoning it costs.
+ * The benchmark corpus: three decisions a coding agent makes every day.
  *
- * Each item is one state and the set of atomic questions a caller would ask
- * about it, together with the answer a careful reader would reach. The
- * baselineNotes on each item are the crux of the comparison: they are the
- * reasoning the calling model has to emit when it answers these questions
- * itself, and they are what the baseline completion cost is computed from.
+ * Each item is one state and the atomic questions a caller would ask about it,
+ * together with the answer a careful reader would reach. The baselineNotes on
+ * each item are the crux of the comparison: they are the reasoning the calling
+ * model has to emit when it decides these things itself, and they are what the
+ * baseline cost is computed from.
  *
- * The items live in two themed modules so neither file grows past the point
- * where a reader can hold it at once.
+ * All three are covered by a shipped bank, so the report can price both Jev
+ * call shapes on the same work.
  *
  * @module dsh-plugin-jev/benchmark/corpus
  */
 
 import type { JevJson, JevQuestion } from '#src/jev/contracts'
-import { GUARDRAIL, TASK_SHAPE } from './items-judgement.ts'
-import { FRONT_DOOR, PULL_REQUEST, SUPPORT_TICKET } from './items-routing.ts'
+import { CODING_CHANGE } from './items-coding.ts'
+import { EXPLORING_TASK } from './items-exploring.ts'
+import { TESTING_FAILURE } from './items-testing.ts'
 
 /** One piece of classification work, with the reasoning it costs. */
 interface BenchmarkItem {
@@ -43,11 +44,9 @@ interface BenchmarkItem {
 
 /** Every item the benchmark ships, in report order. */
 const CORPUS: readonly BenchmarkItem[] = [
-  SUPPORT_TICKET,
-  PULL_REQUEST,
-  GUARDRAIL,
-  TASK_SHAPE,
-  FRONT_DOOR,
+  CODING_CHANGE,
+  TESTING_FAILURE,
+  EXPLORING_TASK,
 ]
 
 /**

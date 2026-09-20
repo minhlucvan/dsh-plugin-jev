@@ -11,7 +11,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 
-import { BANK_IDS } from './jev/catalog.ts'
+import { BANK_IDS } from './jev/catalog/index.ts'
 import { isRecord } from './jev/contracts.ts'
 import type { JevService } from './jev/service.ts'
 

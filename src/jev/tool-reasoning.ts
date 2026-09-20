@@ -13,7 +13,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 
-import { BANK_IDS, getBank } from './catalog.ts'
+import { BANK_IDS, getBank } from './catalog/index.ts'
 import type { JevAnswer, JevJson } from './contracts.ts'
 import { describeAnswer, effectiveConfidence, strictestRoute } from './routing.ts'
 import type { JevRoute } from './routing.ts'

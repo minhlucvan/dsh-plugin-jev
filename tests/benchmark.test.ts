@@ -57,7 +57,7 @@ function testCorpusIsUsable(): void {
   expect.hasAssertions()
   expect(CORPUS.length).toBeGreaterThan(ZERO)
   expect(countDecisions()).toBeGreaterThan(CORPUS.length)
-  expect(getItem('support-ticket')).toBeDefined()
+  expect(getItem('coding')).toBeDefined()
 }
 
 function testEveryAxisIsCosted(): void {
@@ -162,12 +162,14 @@ function testReportLeadsWithCostAndTime(): void {
   expect(markdown).toContain('Mode: **modelled**')
 }
 
-function testReportDistinguishesTheTwoShapes(): void {
+function testReportComparesBothShapesOnTheWholeCorpus(): void {
   expect.hasAssertions()
   const report = runModelledBenchmark()
+  // Every scenario is covered by a bank, so both tables price the same work.
+  // They differ only in the call shape.
   expect(report.all.items).toBe(CORPUS.length)
-  expect(report.bank.items).toBeLessThan(report.all.items)
-  expect(report.bank.decisions).toBeLessThan(report.all.decisions)
+  expect(report.bank.items).toBe(report.all.items)
+  expect(report.bank.cost.percent).toBeGreaterThan(report.all.cost.percent)
 }
 
 describe('benchmark', () => {
@@ -191,6 +193,6 @@ describe('benchmark', () => {
 
   it('leads the report with cost and time', { timeout: TEST_TIMEOUT }, testReportLeadsWithCostAndTime)
 
-  it('keeps the two shapes apart', { timeout: TEST_TIMEOUT }, testReportDistinguishesTheTwoShapes)
+  it('prices both call shapes on the whole corpus', { timeout: TEST_TIMEOUT }, testReportComparesBothShapesOnTheWholeCorpus)
 })
 
