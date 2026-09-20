@@ -26,6 +26,10 @@ standalone-plugin template and follows that template's contract.
   and documentation.
 - Update `README.md`, configuration JSDoc, tests, and `cordis.patch.yml` together
   when behavior changes.
+- Adoption is a feature, not a nicety: a model that has always reasoned its own
+  way through a classification keeps doing that. The `./prompt` companion is the
+  lever that tells it otherwise, so keep its guidance accurate, specific, and
+  worth the tokens it adds to every turn.
 - The credential is read through the host's credential seam, never from a value
   in configuration. The browser settings section stores it there; the plugin
   re-resolves it on every evaluation so a saved key reaches the next call.

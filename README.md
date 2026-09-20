@@ -246,6 +246,7 @@ readable at `GET /api/dsh-plugin-jev/catalog`.
 | `confirmFloor` | `0.85` | at or above this a high-risk answer may act unreviewed |
 | `maxStateChars` | `200000` | refuse a larger state locally rather than bill for a rejected request |
 | `ledgerLimit` | `500` | recent entries retained; cumulative totals are unaffected |
+| `adoptionPrompt` | `true` | tell the agent, in its system prompt, to delegate a narrow decision |
 | `tools.*` | all `true` | per-tool switches, so a profile publishes only part of the catalog |
 
 Every field is validated at resolution, and `confidenceFloor` may not exceed
@@ -262,11 +263,39 @@ entry and behaves exactly as before.
 
 ---
 
+## Getting the agent to actually use it
+
+A tool description says what a tool does. It does not say the tool should be
+*preferred*, and a model that has reasoned its way through thousands of
+classifications in its own context will keep doing that by default. Three things
+push it the other way, in order of strength:
+
+1. **`./prompt`** registers a system-prompt section at the moment the model
+   reads what its tools are for. It states the economics — a typed decision
+   costs a fraction of a reasoning pass and returns in one round trip — and
+   names the shapes to delegate: one option from a list, a position on a scale,
+   yes/no where the probability is the signal, and a task whose shape is unclear.
+   It also says the two things that decide whether delegating is *actually*
+   cheaper: batch every question about one state into a single call, and prefer a
+   shipped bank over ad-hoc questions so the question definitions stay out of the
+   model'''s own output.
+2. **`./skills`** loads on demand when the description matches the task, and
+   carries the detail: how to keep the state small, how to read a `route`.
+3. **The tool descriptions themselves** say "instead of your own reasoning", so a
+   model that is scanning the catalog sees the intent without loading anything.
+
+Every prompt section costs tokens on every turn, so the guidance is written to
+be worth them and is one switch away: set `adoptionPrompt: false` to remove it
+without unmounting anything else.
+
+---
+
 ## Companion surfaces
 
 | Export | Contributes |
 | --- | --- |
 | `./tools` | the six tools above |
+| `./prompt` | a system-prompt section telling the agent to **delegate a decision instead of reasoning it out**, and which shapes to delegate. This is the adoption lever — see below |
 | `./skills` | `jev-narrow-judgements` — when a Jev call beats reasoning, how to keep the state small, how to read a route. The body is rendered from the live thresholds |
 | `./commands` | `/jev` — `usage` and `reset`, read from the ledger without touching the model |
 | `./routes` | `GET /api/dsh-plugin-jev/{health,usage,catalog}`; no route returns a credential |

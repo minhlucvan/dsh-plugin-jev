@@ -62,6 +62,10 @@
       "types": "./lib/invariant.d.ts",
       "default": "./lib/invariant.js"
     },
+    "./prompt": {
+      "types": "./lib/prompt.d.ts",
+      "default": "./lib/prompt.js"
+    },
     "./routes": {
       "types": "./lib/routes.d.ts",
       "default": "./lib/routes.js"

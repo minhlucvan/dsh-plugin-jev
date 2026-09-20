@@ -33,6 +33,7 @@ All four gates must pass before a change is considered done.
 | `src/skills.ts` | `./skills` companion and the rendered skill body |
 | `src/commands.ts` | `./commands` companion: `/jev` |
 | `src/routes.ts` | `./routes` companion: the three read-only endpoints |
+| `src/prompt.ts` | `./prompt` companion: the system-prompt guidance that drives adoption |
 | `src/invariant.ts` | `./invariant` companion: the ledger accounting identity |
 | `src/settings.ts` | Per-user settings section installed with the host settings provider |
 | `src/client/` | Browser face: settings form, API-key field, and usage panel |

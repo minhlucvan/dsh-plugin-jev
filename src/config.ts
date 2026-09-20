@@ -37,6 +37,9 @@ const DEFAULT_MAX_STATE_CHARS = 200_000
 /** Usage entries retained for reporting; totals stay cumulative regardless. */
 const DEFAULT_LEDGER_LIMIT = 500
 
+/** Whether the agent is told, in its system prompt, to prefer Jev for decisions. */
+const DEFAULT_ADOPTION_PROMPT = true
+
 /** Lowest configurable confidence. */
 const MIN_CONFIDENCE = 0
 
@@ -125,6 +128,8 @@ interface Config {
   maxStateChars?: number
   /** Usage entries retained for reporting. */
   ledgerLimit?: number
+  /** Whether the agent is told to prefer Jev for a narrow decision. */
+  adoptionPrompt?: boolean
   /** Per-tool switches. */
   tools?: ToolSwitches
 }
@@ -167,6 +172,8 @@ interface ResolvedConfig {
   maxStateChars: number
   /** Usage entries retained for reporting. */
   ledgerLimit: number
+  /** Whether the agent is told to prefer Jev for a narrow decision. */
+  adoptionPrompt: boolean
   /** Per-tool switches. */
   tools: ResolvedToolSwitches
 }
@@ -191,6 +198,7 @@ const Config: schema<Config> = schema.object({
   confirmFloor: schema.number().default(DEFAULT_CONFIRM_FLOOR),
   maxStateChars: schema.number().default(DEFAULT_MAX_STATE_CHARS),
   ledgerLimit: schema.number().default(DEFAULT_LEDGER_LIMIT),
+  adoptionPrompt: schema.boolean().default(DEFAULT_ADOPTION_PROMPT),
   tools: schema.object({
     classify: schema.boolean().default(true),
     score: schema.boolean().default(true),
@@ -299,6 +307,7 @@ function resolveConfig(config: Config = {}): ResolvedConfig {
     confirmFloor: config.confirmFloor ?? DEFAULT_CONFIRM_FLOOR,
     maxStateChars: config.maxStateChars ?? DEFAULT_MAX_STATE_CHARS,
     ledgerLimit: config.ledgerLimit ?? DEFAULT_LEDGER_LIMIT,
+    adoptionPrompt: config.adoptionPrompt ?? DEFAULT_ADOPTION_PROMPT,
     tools: {
       classify: tools.classify ?? true,
       score: tools.score ?? true,

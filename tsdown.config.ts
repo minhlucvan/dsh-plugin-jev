@@ -12,6 +12,7 @@ export default defineConfig({
     benchmark: 'src/benchmark/index.ts',
     commands: 'src/commands.ts',
     index: 'src/index.ts',
+    prompt: 'src/prompt.ts',
     invariant: 'src/invariant.ts',
     routes: 'src/routes.ts',
     skills: 'src/skills.ts',

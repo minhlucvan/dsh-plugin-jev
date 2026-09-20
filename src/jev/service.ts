@@ -63,6 +63,8 @@ interface JevServiceConfig {
   maxStateChars: number
   /** Usage entries retained for reporting. */
   ledgerLimit: number
+  /** Whether the agent is told to prefer Jev for a narrow decision. */
+  adoptionPrompt: boolean
   /** Per-tool switches. */
   tools: JevToolSwitches
 }
@@ -101,6 +103,8 @@ interface JevService {
   readonly maxStateChars: number
   /** Which tools the profile asked this plugin to publish. */
   readonly tools: JevToolSwitches
+  /** Whether the agent is told to prefer Jev for a narrow decision. */
+  readonly adoptionPrompt: boolean
   /**
    * Adopt a configuration that changed while the plugin was running.
    *
@@ -216,6 +220,9 @@ function createJevService(config: JevServiceConfig, deps: JevServiceDeps): JevSe
     },
     get tools(): JevToolSwitches {
       return current.tools
+    },
+    get adoptionPrompt(): boolean {
+      return current.adoptionPrompt
     },
     get policy(): JevRoutingPolicy {
       return {
