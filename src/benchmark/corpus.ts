@@ -10,12 +10,12 @@
  * The items live in two themed modules so neither file grows past the point
  * where a reader can hold it at once.
  *
- * @module dsh-plugin-jev/benchmark-corpus
+ * @module dsh-plugin-jev/benchmark/corpus
  */
 
-import type { JevJson, JevQuestion } from './jev/contracts.ts'
-import { GUARDRAIL, TASK_SHAPE } from './benchmark-items-judgement.ts'
-import { PULL_REQUEST, SUPPORT_TICKET } from './benchmark-items-routing.ts'
+import type { JevJson, JevQuestion } from '#src/jev/contracts'
+import { GUARDRAIL, TASK_SHAPE } from './items-judgement.ts'
+import { PULL_REQUEST, SUPPORT_TICKET } from './items-routing.ts'
 
 /** One piece of classification work, with the reasoning it costs. */
 interface BenchmarkItem {

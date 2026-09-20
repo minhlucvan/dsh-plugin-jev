@@ -11,13 +11,13 @@
  * bank covers. Measuring only the first would leave the claim the report rests
  * on — that banks are the cheap shape — as the one number nobody checked.
  *
- * @module dsh-plugin-jev/benchmark-live
+ * @module dsh-plugin-jev/benchmark/live
  */
 
-import type { BenchmarkItem } from './benchmark-corpus.ts'
-import { createJevClient } from './jev/client.ts'
-import type { JevClientOptions } from './jev/client.ts'
-import { getBank } from './jev/catalog.ts'
+import type { BenchmarkItem } from './corpus.ts'
+import { createJevClient } from '#src/jev/client'
+import type { JevClientOptions } from '#src/jev/client'
+import { getBank } from '#src/jev/catalog'
 
 /** What one live evaluation cost. */
 interface LiveMeasurement {

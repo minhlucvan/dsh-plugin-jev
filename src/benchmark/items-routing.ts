@@ -6,10 +6,10 @@
  * than as a constant buried in a script. Replace it with a captured trace and
  * re-run to check the claim.
  *
- * @module dsh-plugin-jev/benchmark-items-routing
+ * @module dsh-plugin-jev/benchmark/items-routing
  */
 
-import type { BenchmarkItem } from './benchmark-corpus.ts'
+import type { BenchmarkItem } from './corpus.ts'
 
 /**
  * Support triage.

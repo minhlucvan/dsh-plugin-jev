@@ -12,12 +12,12 @@
  * corpus ships. That is the one modelled quantity in the comparison, and it is
  * labelled as modelled everywhere it appears in a report.
  *
- * @module dsh-plugin-jev/benchmark-cost
+ * @module dsh-plugin-jev/benchmark/cost
  */
 
-import type { BenchmarkItem } from './benchmark-corpus.ts'
-import { estimateJsonTokens, estimateTokens } from './benchmark-estimator.ts'
-import { getBank } from './jev/catalog.ts'
+import type { BenchmarkItem } from './corpus.ts'
+import { estimateJsonTokens, estimateTokens } from './estimator.ts'
+import { getBank } from '#src/jev/catalog'
 
 /** Token cost of one arm for one corpus item. */
 interface ArmCost {

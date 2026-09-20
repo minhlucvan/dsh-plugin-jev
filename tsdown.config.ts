@@ -9,7 +9,7 @@ import { defineConfig } from 'tsdown'
  */
 export default defineConfig({
   entry: {
-    benchmark: 'src/benchmark.ts',
+    benchmark: 'src/benchmark/index.ts',
     commands: 'src/commands.ts',
     index: 'src/index.ts',
     invariant: 'src/invariant.ts',

@@ -3,15 +3,15 @@
  * generated from the same assumptions the arithmetic used, so prose and numbers
  * cannot drift apart.
  *
- * @module dsh-plugin-jev/benchmark-report
+ * @module dsh-plugin-jev/benchmark/report
  */
 
 import {
   DEFAULT_ASSUMPTIONS,
   saving,
-} from './benchmark-cost.ts'
-import type { ArmCost, CostAssumptions } from './benchmark-cost.ts'
-import { countDecisions } from './benchmark-corpus.ts'
+} from './cost.ts'
+import type { ArmCost, CostAssumptions } from './cost.ts'
+import { countDecisions } from './corpus.ts'
 
 /** Base of the decimal system, used to build a rounding factor. */
 const DECIMAL_BASE = 10

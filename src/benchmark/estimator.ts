@@ -13,7 +13,7 @@
  * even though the absolute figures are approximate. Every number the report
  * prints is labelled with the method that produced it.
  *
- * @module dsh-plugin-jev/benchmark-estimator
+ * @module dsh-plugin-jev/benchmark/estimator
  */
 
 /** Characters per token assumed for English prose. */

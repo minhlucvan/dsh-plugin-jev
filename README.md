@@ -71,8 +71,8 @@ pnpm run bench -- --json | jq .totals
 
 **What is measured, what is modelled.** The Jev arm is measured in `--live`
 mode from `usage.input_tokens`. The baseline arm is modelled from reference
-reasoning shipped as data in `src/benchmark-items-routing.ts` and
-`src/benchmark-items-judgement.ts` — read it, disagree with it, replace it with
+reasoning shipped as data in `src/benchmark/items-routing.ts` and
+`src/benchmark/items-judgement.ts` — read it, disagree with it, replace it with
 `--trace`, and re-run. The estimator is four characters per token, applied
 identically to both arms, so the ratio is more meaningful than the absolute
 figures.

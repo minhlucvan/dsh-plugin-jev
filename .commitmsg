@@ -1,0 +1,13 @@
+refactor(benchmark): gather the benchmark into its own folder
+
+Eight flat src/benchmark-*.ts modules become src/benchmark/{index,corpus,cost,
+estimator,items-routing,items-judgement,live,report}.ts, so the package root
+stops mixing one feature's parts in with the plugin's own entry points.
+
+Cross-directory imports inside the benchmark use the #src/ alias rather than
+../jev/...: the lint config forbids parent-relative imports, and the alias
+resolves through both tsconfig paths and the package imports map without
+weakening that rule. The build inlines it, so no unresolved specifier reaches
+lib/.
+
+The live numbers are unchanged by the move.

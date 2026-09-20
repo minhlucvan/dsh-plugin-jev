@@ -9,11 +9,11 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { baselineCost, jevBankCost, jevMeasuredCost, jevModelledCost } from '#src/benchmark-cost'
-import { CORPUS, countDecisions, getItem } from '#src/benchmark-corpus'
-import { estimateTokens } from '#src/benchmark-estimator'
+import { baselineCost, jevBankCost, jevMeasuredCost, jevModelledCost } from '#src/benchmark/cost'
+import { CORPUS, countDecisions, getItem } from '#src/benchmark/corpus'
+import { estimateTokens } from '#src/benchmark/estimator'
 import { runModelledBenchmark } from '#src/benchmark'
-import { buildReport, renderReport } from '#src/benchmark-report'
+import { buildReport, renderReport } from '#src/benchmark/report'
 
 const TEST_TIMEOUT = 5000
 const FIRST_INDEX = 0

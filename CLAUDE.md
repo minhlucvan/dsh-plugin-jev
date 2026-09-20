@@ -44,7 +44,7 @@ All four gates must pass before a change is considered done.
 | `src/jev/catalog.ts` | The four shipped question banks |
 | `src/jev/service.ts` | The `jev` service the companions inject |
 | `src/jev/tool-*.ts` | The tool definitions and their shared helpers |
-| `src/benchmark*.ts` | Corpus, cost arms, live measurement, report rendering |
+| `src/benchmark/` | Corpus, cost arms, live measurement, report rendering |
 | `scripts/benchmark.mjs` | The CLI over the built benchmark module |
 
 ## Hard rules

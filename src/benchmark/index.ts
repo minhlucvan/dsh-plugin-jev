@@ -25,14 +25,14 @@ import {
   jevMeasuredCost,
   jevModelledCost,
   saving,
-} from './benchmark-cost.ts'
-import type { CostAssumptions } from './benchmark-cost.ts'
-import { CORPUS } from './benchmark-corpus.ts'
-import type { BenchmarkItem } from './benchmark-corpus.ts'
-import { measureItems } from './benchmark-live.ts'
-import type { LiveOptions } from './benchmark-live.ts'
-import { buildReport } from './benchmark-report.ts'
-import type { BenchmarkReport, BenchmarkRow } from './benchmark-report.ts'
+} from './cost.ts'
+import type { CostAssumptions } from './cost.ts'
+import { CORPUS } from './corpus.ts'
+import type { BenchmarkItem } from './corpus.ts'
+import { measureItems } from './live.ts'
+import type { LiveOptions } from './live.ts'
+import { buildReport } from './report.ts'
+import type { BenchmarkReport, BenchmarkRow } from './report.ts'
 
 /** What the API reported for one item, when a live run supplied it. */
 interface MeasuredUsage {
@@ -89,9 +89,9 @@ function buildRows(
  */
 function benchmarkSource(): string[] {
   return [
-    'src/benchmark-corpus.ts',
-    'src/benchmark-items-routing.ts',
-    'src/benchmark-items-judgement.ts',
+    'src/benchmark/corpus.ts',
+    'src/benchmark/items-routing.ts',
+    'src/benchmark/items-judgement.ts',
   ]
 }
 
@@ -129,17 +129,17 @@ async function runLiveBenchmark(
   return buildReport(buildRows(assumptions, byId), assumptions, 'measured')
 }
 
-export { DEFAULT_ASSUMPTIONS } from './benchmark-cost.ts'
-export type { ArmCost, CostAssumptions } from './benchmark-cost.ts'
-export { CORPUS, countDecisions, getItem } from './benchmark-corpus.ts'
-export type { BenchmarkItem } from './benchmark-corpus.ts'
-export { measureItems } from './benchmark-live.ts'
-export type { LiveMeasurement, LiveOptions } from './benchmark-live.ts'
+export { DEFAULT_ASSUMPTIONS } from './cost.ts'
+export type { ArmCost, CostAssumptions } from './cost.ts'
+export { CORPUS, countDecisions, getItem } from './corpus.ts'
+export type { BenchmarkItem } from './corpus.ts'
+export { measureItems } from './live.ts'
+export type { LiveMeasurement, LiveOptions } from './live.ts'
 export {
   buildReport,
   renderReport,
   round,
-} from './benchmark-report.ts'
-export type { BenchmarkMode, BenchmarkReport, BenchmarkRow } from './benchmark-report.ts'
+} from './report.ts'
+export type { BenchmarkMode, BenchmarkReport, BenchmarkRow } from './report.ts'
 export { benchmarkSource, buildRows, runLiveBenchmark, runModelledBenchmark }
 
