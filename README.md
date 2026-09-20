@@ -104,17 +104,35 @@ ordinary profile. The route and invariant rows are documented as opt-ins: a
 pending injection blocks startup, and not every profile provides `webServer`
 (headless does not) or `invariants` (no ordinary profile does).
 
-Set the credential before starting the host:
+### The API key
+
+Enter it in the plugin's settings section, in the same place as the model and
+the thresholds. It is stored by the host's credential service in
+`$DSH_HOME/.credentials.yaml`, not by this plugin, and it is never logged,
+returned, or written into the bundle patch.
+
+You can also export it instead:
 
 ```sh
 export TYPESAFE_API_KEY=...
 ```
 
-The plugin reads the **name** of the variable from configuration and never
-commits, logs, or returns the secret itself. Activation fails loudly if the
-plugin is enabled and the variable is empty: a plugin mounted but unable to work
-should say so at startup rather than at the first tool call. To mount it without
-a credential, set `enabled: false`; it then publishes no live tool and logs a
+Both work at once, and the host decides which wins. An inherited process
+environment is treated as this run's explicit intent and is read-only, so the
+settings field reports the reference as not writable and refuses to shadow it;
+the provider-managed store otherwise wins over a `.env` file the checkout
+happens to carry. The plugin re-resolves the credential on **every** evaluation,
+so a key saved in the settings page reaches the very next tool call without
+restarting the host.
+
+Configuration carries the **name** of the reference, never the secret.
+
+Where a failure lands depends on whether the key can still be supplied later.
+With the credential service mounted — every ordinary profile has it — activation
+succeeds and an unset key fails the call that needs it, naming the reference.
+Without that service the environment is the only source, so activation stays the
+earliest point it can be judged and a missing key fails there. To mount the
+plugin with no credential at all, set `enabled: false`; it then publishes no live tool and logs a
 warning.
 
 ---

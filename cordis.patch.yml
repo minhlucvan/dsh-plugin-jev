@@ -11,8 +11,9 @@
     - id: dsh-plugin-jev
       name: 'dsh-plugin-jev'
       config:
-        # The credential is read from this variable; the secret itself is never
-        # part of the patch.
+        # Name of the reference the credential is resolved from. Store the key
+        # itself in the settings page (or in the host credential file); the
+        # secret is never part of this patch.
         apiKeyEnv: TYPESAFE_API_KEY
         model: jev-latest
         confidenceFloor: 0.5
