@@ -78,7 +78,7 @@ Either export it:
 export TYPESAFE_API_KEY=...
 ```
 
-or enter it in **Settings → Jev**. The key is stored by the host's credential
+or enter it in **Settings → System One**. The key is stored by the host's credential
 service in `$DSH_HOME/.credentials.yaml` — never by this plugin, and never in
 the bundle patch. Configuration carries the *name* of the reference, never the
 secret.
@@ -96,10 +96,13 @@ curl http://127.0.0.1:3080/api/dsh-plugin-jev/health
 # {"ok":true,"enabled":true,"model":"jev-latest"}
 ```
 
-If the credential service is mounted — every ordinary profile has it — the plugin
-loads without a key and the first tool call that needs one says so by name.
-Without that service the environment is the only source, so a missing key fails
-at startup instead. Set `enabled: false` to mount it with no credential at all.
+A missing key never blocks startup: activating is what installs the settings
+section you would supply one through, so the plugin loads, warns once naming the
+reference, and every evaluation that needs the key reports it by name. The
+credential seam is looked up on each evaluation rather than once at activation,
+which is also what makes the row order between this plugin and the host's
+credential provider irrelevant — an inserted row lands ahead of the rows it
+patches over. Set `enabled: false` to mount it with no credential at all.
 
 ---
 
@@ -216,7 +219,7 @@ Four surfaces over one ledger, so they cannot disagree:
 
 | Surface | Shows |
 | --- | --- |
-| **Settings → Jev** | totals, billed input tokens, the Mtok figure, per-tool breakdown, recent calls |
+| **Settings → System One** | totals, billed input tokens, the Mtok figure, per-tool breakdown, recent calls |
 | `/jev usage` | the same totals without a model round trip; `/jev reset` zeroes them |
 | `jev_usage` tool | lets the agent price a judgement before repeating it |
 | `GET /api/dsh-plugin-jev/usage` | the same ledger as JSON |

@@ -11,7 +11,7 @@
  */
 import LoaderPlugin from '@cordisjs/plugin-loader'
 import { Context } from '@deepseek-ai/cordis'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { resolveConfig } from '#src/config'
 import { DEFAULT_API_KEY_ENV, TEST_API_KEY, createPluginHarness } from './harness.ts'
@@ -127,14 +127,22 @@ async function testProvidesServiceAndReleasesIt(): Promise<void> {
   expect(harness.ctx.get(SERVICE_NAME)).toBeUndefined()
 }
 
-async function testRefusesWithoutCredential(): Promise<void> {
+async function testActivatesWithoutCredential(): Promise<void> {
   expect.hasAssertions()
   await withoutApiKey(async (): Promise<void> => {
     const ctx = new Context()
+    const warn = vi.spyOn(ctx.logger, 'warn').mockReturnValue()
     const plugin = await import('#src/index')
-    await expect(ctx.plugin(plugin, {})).rejects.toThrow(
-      new RegExp(DEFAULT_API_KEY_ENV, 'u'),
-    )
+    /*
+     * A missing key warns; it never refuses activation, because activation is
+     * what installs the settings section a user supplies the key through. The
+     * host's credential provider may also mount after this row.
+     */
+    const fiber = await ctx.plugin(plugin, {})
+    expect(ctx.get(SERVICE_NAME)).toBeDefined()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(DEFAULT_API_KEY_ENV))
+    await fiber.dispose()
+    warn.mockRestore()
   })
 }
 
@@ -160,7 +168,7 @@ describe('dsh-plugin-jev', () => {
 
   it('provides the jev service and releases it with the fiber', { timeout: TEST_TIMEOUT }, testProvidesServiceAndReleasesIt)
 
-  it('refuses to activate when the credential is unset', { timeout: TEST_TIMEOUT }, testRefusesWithoutCredential)
+  it('activates and warns when the credential is unset', { timeout: TEST_TIMEOUT }, testActivatesWithoutCredential)
 
   it('loads without a credential when it is disabled', { timeout: TEST_TIMEOUT }, testLoadsDisabledWithoutCredential)
 })

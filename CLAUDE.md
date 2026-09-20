@@ -74,10 +74,13 @@ All four gates must pass before a change is considered done.
   `apiKeyEnv`; the runtime resolves it per evaluation through `ctx.credentials`
   when that service is mounted, and through the environment when it is not.
   Never log, return, or commit the secret, and never cache it across calls — a
-  key saved in the settings page must reach the next call. Failure timing
-  follows the same rule: with a credential seam mounted the settings page can
-  still supply the key, so activation succeeds and the call that needs it fails;
-  without one, activation fails.
+  key saved in the settings page must reach the next call. The seam itself is
+  looked up per evaluation too: Cordis mounts the host's credential provider as
+  its own row, and this plugin's inserted row is applied first, so sampling the
+  seam once at activation would report "no provider" for the life of the fiber.
+  A missing key therefore never refuses activation — activation is what installs
+  the settings section that supplies one. It warns once, and the call that needs
+  the key names it.
 - **The benchmark must stay honest.** The baseline arm is modelled from
   reference reasoning that ships as data. If a change makes the result look
   better, check whether it made the comparison worse.

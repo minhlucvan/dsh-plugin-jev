@@ -17,6 +17,7 @@ const EXPECTED_SINGLE_CALL = 1
 const FIRST_INDEX = 0
 const SLOT_NAME = 'settings.section'
 const SLOT_ID = 'dsh-plugin-jev'
+const HOST_REVISION = 4
 
 /** A settings scope as the client's narrow contract sees it. */
 interface FakeScope {
@@ -120,8 +121,17 @@ function provideFakes(ctx: Context): Fakes {
   )
   const scopeBind = vi.fn<(options: { namespace: string }) => FakeScope>(
     (): FakeScope => ({
-      /* A malformed stored value, which the client must normalize on the way out. */
-      getSnapshot: (): unknown => ({ model: '   ', confidenceFloor: 'nonsense' }),
+      /*
+       * A malformed section inside a real snapshot, which the client must
+       * normalize on the way out — and read from its value, not off the
+       * snapshot itself.
+       */
+      getSnapshot: (): unknown => ({
+        status: 'ready',
+        value: { model: '   ', confidenceFloor: 'nonsense' },
+        revision: HOST_REVISION,
+        writable: true,
+      }),
       subscribe: (): (() => void) => (): void => {
         // No notifications are delivered by this fake.
       },
@@ -238,7 +248,12 @@ async function testNormalizesTheBoundScope(): Promise<void> {
   if (!isNarrowScope(scope)) {
     throw new TypeError('the client injected no settings scope')
   }
-  expect(scope.getSnapshot()).toStrictEqual(defaultSettings)
+  expect(scope.getSnapshot()).toStrictEqual({
+    status: 'ready',
+    value: defaultSettings,
+    revision: HOST_REVISION,
+    writable: true,
+  })
   await fiber.dispose()
 }
 

@@ -53,13 +53,15 @@ interface ToggleFieldBinding {
 /** The settings state a field renders from. */
 type SettingsDraftSlice = Pick<
   SettingsState,
-  'draft' | 'dirty' | 'persisted' | 'saving' | 'error'
+  'draft' | 'dirty' | 'persisted' | 'saving' | 'error' | 'writable'
 >
 
 /** What the save and reset controls bind to. */
 interface SettingsControls {
   /** Whether a save is in flight. */
   saving: boolean
+  /** Whether the host document accepts writes. */
+  writable: boolean
   /** Whether the normalized draft differs from the persisted snapshot. */
   dirty: boolean
   /** The last save failure, absent when the previous save succeeded. */
@@ -68,6 +70,19 @@ interface SettingsControls {
   save: () => Promise<void>
   /** Discard the draft. */
   reset: () => void
+}
+
+/**
+ * Whether a field should refuse edits.
+ *
+ * A write in flight and a namespace the host will not write are the same
+ * instruction to the user: this value cannot change right now.
+ *
+ * @param state - The draft-relevant state slice.
+ * @returns True when the field is not editable.
+ */
+function fieldLocked(state: SettingsDraftSlice): boolean {
+  return state.saving || !state.writable
 }
 
 /**
@@ -103,6 +118,7 @@ function useSettingsDraft(): SettingsDraftSlice {
       dirty: state.dirty,
       persisted: state.persisted,
       saving: state.saving,
+      writable: state.writable,
       error: state.error,
     })),
   )
@@ -153,7 +169,11 @@ function useTextField(field: TextFieldName): TextFieldBinding {
     [field, setText],
   )
 
-  return { value: displayDraft(state)[field], disabled: state.saving, onChange }
+  return {
+    value: displayDraft(state)[field],
+    disabled: fieldLocked(state),
+    onChange,
+  }
 }
 
 /**
@@ -176,7 +196,11 @@ function useNumberField(field: NumberFieldName): TextFieldBinding {
     [field, setCount],
   )
 
-  return { value: displayDraft(state)[field], disabled: state.saving, onChange }
+  return {
+    value: displayDraft(state)[field],
+    disabled: fieldLocked(state),
+    onChange,
+  }
 }
 
 /**
@@ -202,7 +226,7 @@ function useToggleField(field: ToggleFieldName): ToggleFieldBinding {
 
   return {
     checked: displayDraft(state)[field],
-    disabled: state.saving,
+    disabled: fieldLocked(state),
     onChange,
   }
 }
@@ -279,7 +303,7 @@ function useBanksField(): BanksFieldBinding {
   return {
     banks: catalog,
     failed: status === 'error',
-    disabled: state.saving,
+    disabled: fieldLocked(state),
     isOn,
     toggle,
   }
@@ -295,9 +319,9 @@ function useBanksField(): BanksFieldBinding {
  * @returns The controls' state and actions.
  */
 function useSettingsControls(): SettingsControls {
-  const { dirty, saving, error } = useSettingsDraft()
+  const { dirty, saving, writable, error } = useSettingsDraft()
   const { save, reset } = useSettingsActions()
-  return { saving, dirty, error, save, reset }
+  return { saving, writable, dirty, error, save, reset }
 }
 
 export {

@@ -9,7 +9,12 @@
  * @module dsh-plugin-jev/client/settings
  */
 
-import type { SettingsScope } from './contracts.ts'
+import type {
+  SettingsPathOp,
+  SettingsScope,
+  SettingsScopeSnapshot,
+} from './contracts.ts'
+import { readScopeSnapshot } from './contracts.ts'
 import {
   ALL_BANKS,
   normalizeBanks,
@@ -20,8 +25,14 @@ import {
 } from './settings-bounds.ts'
 import type { NumberBounds } from './settings-bounds.ts'
 
-/** Settings this feature persists. */
-interface ClientSettings {
+/**
+ * Settings this feature persists.
+ *
+ * A type alias rather than an interface on purpose: TypeScript grants an
+ * implicit index signature to an object type but not to an interface, and the
+ * write path carries this value inside a JSON-shaped path operation.
+ */
+type ClientSettings = {
   /** Master switch; a disabled plugin never contacts TypeSafe. */
   enabled: boolean
   /** Whether the agent is told, in its system prompt, to prefer Jev. */
@@ -263,15 +274,48 @@ interface SettingsSource<TValue> {
  */
 function settingsScopeSource<TValue>(
   scope: SettingsScope<TValue>,
-): SettingsSource<TValue> {
+): SettingsSource<SettingsScopeSnapshot<TValue>> {
   return {
     getSnapshot: () => scope.getSnapshot(),
     subscribe: (listener: () => void) => scope.subscribe(listener),
   }
 }
 
+/**
+ * Convert the host's scope into one carrying complete settings.
+ *
+ * The host reports the raw section inside a snapshot, and that section is
+ * whatever the document happens to hold: missing, legacy or wrongly typed. This
+ * is the one place it is judged, so the store and every field above it can
+ * assume a complete, in-range value.
+ *
+ * @param raw - The scope the host bound.
+ * @returns A scope whose snapshots carry normalized settings.
+ */
+function normalizeScope(raw: SettingsScope<unknown>): SettingsScope<ClientSettings> {
+  return {
+    getSnapshot: (): SettingsScopeSnapshot<ClientSettings> => {
+      const snapshot = readScopeSnapshot(raw.getSnapshot())
+      return {
+        status: snapshot.status,
+        value: normalizeSettings(snapshot.value),
+        revision: snapshot.revision,
+        writable: snapshot.writable,
+      }
+    },
+    subscribe: (listener: () => void): (() => void) => raw.subscribe(listener),
+    mutate: async (
+      ops: readonly SettingsPathOp[],
+      expectedRevision?: number,
+    ): Promise<void> => {
+      await raw.mutate(ops, expectedRevision)
+    },
+  }
+}
+
 export {
   defaultSettings,
+  normalizeScope,
   normalizeSettings,
   sameSettings,
   settingsScopeSource,

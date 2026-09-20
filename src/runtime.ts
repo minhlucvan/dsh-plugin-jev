@@ -6,11 +6,12 @@
  * Cordis logger — enters here, so tests can substitute all three and the rest
  * of the package never reaches for a global.
  *
- * The credential is resolved *per evaluation*, never cached at activation. That
- * is what lets a key entered in the browser settings page reach the very next
- * tool call without restarting the host, and it is why the plugin does not
- * refuse to load merely because no key is set yet when a credentials provider
- * is mounted: the settings UI is a legitimate way to supply it afterwards.
+ * The credential is resolved *per evaluation*, never cached at activation, and
+ * the credential seam itself is looked up per evaluation too. That is what lets
+ * a key entered in the browser settings page reach the very next tool call
+ * without restarting the host, and it is why a missing key is a warning rather
+ * than a load failure: the settings section this plugin installs is itself the
+ * interface that supplies the key, so refusing to activate would remove it.
  *
  * @module dsh-plugin-jev/runtime
  */
@@ -54,6 +55,13 @@ interface PluginRuntime {
    * needs a fresh resolver rather than the one built at activation.
    */
   credentialFor: CredentialFactory
+  /**
+   * Whether a key can be resolved right now.
+   *
+   * Read at activation only to decide whether to warn; a provider that mounts
+   * later still supplies the key, because resolution re-reads the seam.
+   */
+  credentialAvailable: () => boolean
 }
 
 /** The part of the process environment this plugin reads. */
@@ -124,6 +132,12 @@ function readApiKey(env: Environment, apiKeyEnv: string): string {
  * layers the managed store over the environment and is what the settings page
  * writes to. Without it, the process environment is the only source available.
  *
+ * The seam is looked up on **every call** rather than once here. Cordis mounts
+ * the host's credential provider as its own row, and this plugin's row may be
+ * applied first — an insert lands ahead of the rows it patches over — so a
+ * resolver that sampled the seam at activation would remember "no provider" for
+ * the life of the fiber even though the profile mounts one.
+ *
  * @param ctx - Scoped plugin context.
  * @param config - Resolved plugin configuration.
  * @param env - Environment to read when no provider is mounted.
@@ -134,28 +148,39 @@ function createCredentialResolver(
   config: ResolvedConfig,
   env: Environment,
 ): CredentialResolver {
-  const provider: unknown = ctx.get(CREDENTIALS_SERVICE)
-  if (
-    isCredentialProviderLike(provider)
-    && CREDENTIAL_REF_PATTERN.test(config.apiKeyEnv)
-  ) {
-    return {
-      fromProvider: true,
-      resolve: async (): Promise<string | undefined> => {
-        const resolved = await provider.resolve(config.apiKeyEnv)
+  const reference = config.apiKeyEnv
+  const named = CREDENTIAL_REF_PATTERN.test(reference)
+
+  /**
+   * Read the credential seam as it stands right now.
+   *
+   * @returns The provider, or undefined while none is mounted.
+   */
+  const providerNow = (): CredentialProviderLike | undefined => {
+    if (!named) {
+      return undefined
+    }
+    const value: unknown = ctx.get(CREDENTIALS_SERVICE)
+    if (!isCredentialProviderLike(value)) {
+      return undefined
+    }
+    return value
+  }
+
+  return {
+    fromProvider: providerNow() !== undefined,
+    resolve: async (): Promise<string | undefined> => {
+      const provider = providerNow()
+      if (provider !== undefined) {
+        const resolved = await provider.resolve(reference)
         const value = resolved?.value.trim() ?? ''
         if (value === '') {
           return undefined
         }
         return value
-      },
-    }
-  }
-  return {
-    fromProvider: false,
-    resolve: async (): Promise<string | undefined> => {
+      }
       await Promise.resolve()
-      const value = readApiKey(env, config.apiKeyEnv)
+      const value = readApiKey(env, reference)
       if (value === '') {
         return undefined
       }
@@ -167,18 +192,17 @@ function createCredentialResolver(
 /**
  * Create the production runtime adapter from a scoped Cordis context.
  *
- * The credential is judged differently depending on whether it can still be
- * supplied later. With the host's credential seam mounted, the settings page is
- * a real configuration path, so activation succeeds and an unset key fails the
- * call that needs it. Without that seam, the environment is the only source and
- * activation is the earliest point at which it can be judged, so a missing key
- * fails there.
+ * A missing key never refuses activation. This plugin installs the settings
+ * section that supplies the key, so refusing to load removes the only interface
+ * that could fix the problem — and whether the host's credential provider is
+ * mounted at this instant is a load-order accident, not a property of the
+ * profile. An unset key is reported once at activation and again on the call
+ * that needed it.
  *
  * @param ctx - Scoped plugin context.
  * @param config - Resolved plugin configuration.
  * @param env - Environment to read when no provider is mounted.
  * @returns Host behavior and the service the plugin provides.
- * @throws {Error} When the key is unset and no provider could supply it later.
  */
 function createPluginRuntime(
   ctx: Context,
@@ -186,17 +210,6 @@ function createPluginRuntime(
   env: Environment = process.env,
 ): PluginRuntime {
   const credentials = createCredentialResolver(ctx, config, env)
-  if (
-    config.enabled
-    && !credentials.fromProvider
-    && readApiKey(env, config.apiKeyEnv) === ''
-  ) {
-    throw new Error(
-      `dsh-plugin-jev: "${config.apiKeyEnv}" is not set and no credential service is `
-      + 'mounted to supply it. Export the TypeSafe API key, or mount the plugin with '
-      + '"enabled: false" to load it without one.',
-    )
-  }
 
   return {
     info: (message) => {
@@ -205,6 +218,8 @@ function createPluginRuntime(
     warn: (message) => {
       ctx.logger.warn(message)
     },
+    credentialAvailable: (): boolean =>
+      credentials.fromProvider || readApiKey(env, config.apiKeyEnv) !== '',
     credentialFor: (next: ResolvedConfig): (() => Promise<string | undefined>) =>
       createCredentialResolver(ctx, next, env).resolve,
     service: createJevService(config, { resolveApiKey: credentials.resolve }),
@@ -235,6 +250,12 @@ function apply(ctx: Context, config: Config): void {
   })
   if (resolved.enabled) {
     runtime.info(`dsh-plugin-jev ready: model ${resolved.model} at ${resolved.baseUrl}`)
+    if (!runtime.credentialAvailable()) {
+      runtime.warn(
+        `dsh-plugin-jev has no TypeSafe key yet: set one in System One settings, or `
+        + `export "${resolved.apiKeyEnv}". Tool calls fail until it is configured.`,
+      )
+    }
     return
   }
   runtime.warn(

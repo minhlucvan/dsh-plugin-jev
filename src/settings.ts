@@ -13,10 +13,9 @@
  * is the fallback, so a profile that has no settings service behaves exactly as
  * before.
  *
- * The schema here is deliberately the same seven fields the browser face edits,
- * in the same order, with the same bounds. A field the UI can set but the host
- * ignores would be a lie, and a host field the UI cannot reach would be a dead
- * setting.
+ * The schema here is deliberately the same fields the browser face edits, in the
+ * same order, with the same bounds. A field the UI can set but the host ignores
+ * would be a lie, and a host field the UI cannot reach would be a dead setting.
  *
  * @module dsh-plugin-jev/settings
  */

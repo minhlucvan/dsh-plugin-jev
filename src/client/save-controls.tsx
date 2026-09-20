@@ -19,6 +19,14 @@ interface SaveControlsProps {
   translate: Translate
 }
 
+/** Props accepted by {@link ReadOnlyNotice}. */
+interface ReadOnlyNoticeProps {
+  /** Whether the host document accepts writes. */
+  writable: boolean
+  /** Translator bound to this feature's namespace. */
+  translate: Translate
+}
+
 /** Props accepted by {@link SaveError}. */
 interface SaveErrorProps {
   /** The failure message, absent when the last save succeeded. */
@@ -38,6 +46,31 @@ function saveLabelKey(saving: boolean): string {
     return 'saving'
   }
   return 'save'
+}
+
+/**
+ * Explain why the form cannot be saved, when it cannot.
+ *
+ * The host reports an unwritable namespace for a browser connection that keeps
+ * preferences process-local, which is a deployment fact rather than a user
+ * error: the honest thing is to say so instead of offering a disabled button
+ * with no reason beside it.
+ *
+ * @param props - Whether the namespace is writable and the bound translator.
+ * @returns The notice element, or nothing when the form is writable.
+ */
+function ReadOnlyNotice({
+  writable,
+  translate,
+}: ReadOnlyNoticeProps): ReactElement | undefined {
+  if (writable) {
+    return undefined
+  }
+  return (
+    <p className='jev-status' role='status'>
+      {translate('settingsReadOnly')}
+    </p>
+  )
 }
 
 /**
@@ -67,15 +100,16 @@ function SaveError({ error, translate }: SaveErrorProps): ReactElement | undefin
  * @returns The buttons and, when a save failed, its reason.
  */
 function SaveControls({ translate }: SaveControlsProps): ReactElement {
-  const { saving, dirty, error, save, reset } = useSettingsControls()
+  const { saving, writable, dirty, error, save, reset } = useSettingsControls()
 
   return (
     <div className='jev-group'>
+      <ReadOnlyNotice writable={writable} translate={translate} />
       <div className='jev-actions'>
         <button
           type='button'
           className='jev-btn jev-btn--primary'
-          disabled={saving || !dirty}
+          disabled={saving || !writable || !dirty}
           onClick={() => {
             /*
              * React ignores a handler's return value, so the promise is
@@ -89,7 +123,7 @@ function SaveControls({ translate }: SaveControlsProps): ReactElement {
         <button
           type='button'
           className='jev-btn jev-btn--quiet'
-          disabled={saving}
+          disabled={saving || !writable}
           onClick={() => {
             reset()
           }}
@@ -102,5 +136,11 @@ function SaveControls({ translate }: SaveControlsProps): ReactElement {
   )
 }
 
-export { SaveControls, saveLabelKey, type SaveControlsProps }
+export {
+  ReadOnlyNotice,
+  SaveControls,
+  saveLabelKey,
+  type ReadOnlyNoticeProps,
+  type SaveControlsProps,
+}
 

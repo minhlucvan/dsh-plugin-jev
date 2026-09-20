@@ -10,7 +10,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import type { CatalogReport, HealthReport, UsageApi, UsageReport } from '#src/client/api'
-import type { SettingsScope } from '#src/client/contracts'
+import type {
+  SettingsScope,
+  SettingsScopeSnapshot,
+} from '#src/client/contracts'
 import type { CredentialApi, CredentialInfo } from '#src/client/credentials'
 import type { ClientSettings } from '#src/client/settings'
 import { defaultSettings } from '#src/client/settings'
@@ -106,7 +109,12 @@ function fakeApi(failure?: Error): FakeApi {
  */
 function fakeScope(): SettingsScope<ClientSettings> {
   return {
-    getSnapshot: (): ClientSettings => ({ ...defaultSettings }),
+    getSnapshot: (): SettingsScopeSnapshot<ClientSettings> => ({
+      status: 'ready',
+      value: { ...defaultSettings },
+      revision: undefined,
+      writable: true,
+    }),
     subscribe: (): (() => void) => (): void => {
       // This suite never writes settings, so the fake never notifies.
     },

@@ -43,9 +43,10 @@ const en = {
   credentialConfigured: 'A key is configured.',
   credentialMissing: 'No key is configured yet.',
   credentialSource: 'Supplied by',
+  credentialReference: 'Reference',
   credentialWritable: 'This key can be changed here.',
   credentialReadOnly:
-    'An inherited environment variable supplies this key, so it cannot be changed here.',
+    'This key comes from the process environment, which wins over anything stored here. Unset that variable and restart to manage the key on this page.',
   credentialSave: 'Save key',
   credentialSaving: 'Saving key…',
   credentialClear: 'Clear key',
@@ -66,6 +67,8 @@ const en = {
   saving: 'Saving…',
   reset: 'Reset',
   saveFailed: 'Could not save',
+  settingsReadOnly:
+    'This browser connection cannot write the host settings document, so these values are read-only.',
   usageHeading: 'Token ledger',
   usageDescription:
     'What this session has spent on evaluations, and what those tokens bought.',
@@ -133,8 +136,10 @@ const zh: Record<MessageKey, string> = {
   credentialConfigured: '已配置密钥。',
   credentialMissing: '尚未配置密钥。',
   credentialSource: '来源',
+  credentialReference: '引用名',
   credentialWritable: '可以在这里修改该密钥。',
-  credentialReadOnly: '该密钥由继承的环境变量提供，无法在这里修改。',
+  credentialReadOnly:
+    '该密钥来自进程环境，其优先级高于此处保存的值。取消该环境变量并重启后，即可在此页面管理密钥。',
   credentialSave: '保存密钥',
   credentialSaving: '正在保存密钥…',
   credentialClear: '清除密钥',
@@ -153,6 +158,7 @@ const zh: Record<MessageKey, string> = {
   saving: '保存中…',
   reset: '重置',
   saveFailed: '保存失败',
+  settingsReadOnly: '当前浏览器连接无法写入宿主设置文档，因此这些值只能查看。',
   usageHeading: 'Token 账本',
   usageDescription: '本次会话在评估上花费的 token，以及这些 token 换来了什么。',
   usageRefresh: '刷新',

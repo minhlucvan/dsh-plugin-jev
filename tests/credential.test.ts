@@ -2,13 +2,13 @@
  * Credential tests.
  *
  * The API key can arrive from two places — the host's credential seam or the
- * process environment — and the choice changes when the plugin is allowed to
- * fail. These cases pin both the resolution and the failure timing, because a
- * plugin that refuses to load before the settings page can supply a key is
- * unusable, and one that loads and then cannot say why a call failed is worse.
+ * process environment — and which one is mounted when is a matter of profile
+ * load order. These cases pin the resolution and the failure timing: activation
+ * never fails on a missing key, because activation is what installs the
+ * settings page that supplies one.
  */
 import { Context } from '@deepseek-ai/cordis'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { resolveConfig } from '#src/config'
 import { createJevService } from '#src/jev/service'
@@ -173,12 +173,58 @@ async function testActivatesWithoutAKeyWhenASeamIsMounted(): Promise<void> {
   removeService()
 }
 
-function testRefusesToActivateWithoutEitherSource(): void {
+async function testActivatesWithoutAnyKeySource(): Promise<void> {
+  expect.hasAssertions()
+  /*
+   * The suite inherits the developer's environment, so the variable is cleared
+   * for the duration rather than assumed absent.
+   */
+  const previous = process.env[DEFAULT_API_KEY_ENV]
+  Reflect.deleteProperty(process.env, DEFAULT_API_KEY_ENV)
+  const ctx = new Context()
+  const info = vi.spyOn(ctx.logger, 'info').mockReturnValue()
+  const warn = vi.spyOn(ctx.logger, 'warn').mockReturnValue()
+  try {
+    const fiber = await ctx.plugin(
+      { apply, name, inject },
+      { apiKeyEnv: DEFAULT_API_KEY_ENV },
+    )
+
+    /*
+     * Activation publishes the service and installs the settings section that
+     * supplies the key, so it must not be the point at which a missing key is
+     * fatal: whether the host's provider is mounted this instant is load order.
+     */
+    expect(ctx.get('jev')).toBeDefined()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(DEFAULT_API_KEY_ENV))
+
+    await fiber.dispose()
+  } finally {
+    info.mockRestore()
+    warn.mockRestore()
+    if (previous !== undefined) {
+      process.env[DEFAULT_API_KEY_ENV] = previous
+    }
+  }
+}
+
+async function testUsesASeamMountedAfterActivation(): Promise<void> {
   expect.hasAssertions()
   const ctx = new Context()
-  expect(() =>
-    createPluginRuntime(ctx, resolveConfig({ apiKeyEnv: DEFAULT_API_KEY_ENV }), {}),
-  ).toThrow(new RegExp(DEFAULT_API_KEY_ENV, 'u'))
+  const config = resolveConfig({ apiKeyEnv: API_KEY_ENV })
+  const runtime = createPluginRuntime(ctx, config, {})
+
+  // Nothing can supply the key yet.
+  await expect(runtime.credentialFor(config)()).resolves.toBeUndefined()
+
+  /*
+   * Cordis mounts the host's credentials row after this plugin's own insert, so
+   * this ordering is the normal one rather than an edge case.
+   */
+  const credentials = mutableCredentials(PROVIDER_KEY_VALUE)
+  const removeService = ctx.provide('credentials', { resolve: credentials.resolve })
+  await expect(runtime.credentialFor(config)()).resolves.toBe(PROVIDER_KEY_VALUE)
+  removeService()
 }
 
 function testReadsTheKeyTheSeamHolds(): void {
@@ -197,7 +243,9 @@ describe('credential resolution', () => {
 
   it('activates without a key when the seam can supply one later', { timeout: TEST_TIMEOUT }, testActivatesWithoutAKeyWhenASeamIsMounted)
 
-  it('refuses to activate without either source', { timeout: TEST_TIMEOUT }, testRefusesToActivateWithoutEitherSource)
+  it('activates and says so when no key source exists yet', { timeout: TEST_TIMEOUT }, testActivatesWithoutAnyKeySource)
+
+  it('uses a seam mounted after activation', { timeout: TEST_TIMEOUT }, testUsesASeamMountedAfterActivation)
 
   it('reads the resolved key from the seam', { timeout: TEST_TIMEOUT }, testReadsTheKeyTheSeamHolds)
 })

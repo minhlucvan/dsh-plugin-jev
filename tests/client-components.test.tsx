@@ -13,7 +13,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { CatalogReport, HealthReport, UsageApi, UsageReport } from '#src/client/api'
 import { SettingsStoreProvider, useSettingsStore } from '#src/client/context'
-import type { SettingsScope } from '#src/client/contracts'
+import type {
+  SettingsScope,
+  SettingsScopeSnapshot,
+} from '#src/client/contracts'
 import type { CredentialApi, CredentialInfo } from '#src/client/credentials'
 import { useSettingsDraft } from '#src/client/hooks'
 import type { ClientSettings } from '#src/client/settings'
@@ -64,7 +67,7 @@ const NO_CREDENTIALS: CredentialApi = {
 interface FakeScope {
   /** The scope handed to the page. */ scope: SettingsScope<ClientSettings>
   /** The recorded writes. */ mutate: ReturnType<typeof vi.fn>
-  /** Replace the snapshot the host reports. */ setSnapshot: (value: ClientSettings) => void
+  /** Replace the section the host reports. */ setSection: (value: ClientSettings) => void
   /** Notify subscribers, as the host does after a write. */ notify: () => void
 }
 
@@ -83,16 +86,21 @@ function snapshot(model: string): ClientSettings {
  *
  * @returns The fake scope plus its recorders.
  */
-function fakeScope(): FakeScope {
-  let snapshotValue: ClientSettings = snapshot(PERSISTED_MODEL)
+function fakeScope(writable = true): FakeScope {
+  let section: ClientSettings = snapshot(PERSISTED_MODEL)
   const listeners = new Set<() => void>()
-  const mutate = vi.fn<(value: ClientSettings) => Promise<void>>(async (): Promise<void> => {
+  const mutate = vi.fn<(ops: readonly unknown[]) => Promise<void>>(async (): Promise<void> => {
     await Promise.resolve()
   })
 
   return {
     scope: {
-      getSnapshot: (): ClientSettings => snapshotValue,
+      getSnapshot: (): SettingsScopeSnapshot<ClientSettings> => ({
+        status: 'ready',
+        value: section,
+        revision: undefined,
+        writable,
+      }),
       subscribe: (listener: () => void): (() => void) => {
         listeners.add(listener)
         return () => {
@@ -102,8 +110,8 @@ function fakeScope(): FakeScope {
       mutate,
     },
     mutate,
-    setSnapshot: (value: ClientSettings): void => {
-      snapshotValue = value
+    setSection: (value: ClientSettings): void => {
+      section = value
     },
     notify: (): void => {
       for (const listener of listeners) {
@@ -234,8 +242,25 @@ async function testSavePersistsTheNormalizedDraft(): Promise<void> {
   await waitFor(() => {
     expect(fake.mutate).toHaveBeenCalledTimes(EXPECTED_SINGLE_CALL)
   })
-  const written: unknown = fake.mutate.mock.calls[FIRST_INDEX]?.[FIRST_INDEX]
-  expect(written).toMatchObject({ model: 'jev', ledgerLimit: 100_000 })
+  const ops: unknown = fake.mutate.mock.calls[FIRST_INDEX]?.[FIRST_INDEX]
+  expect(ops).toStrictEqual([
+    {
+      op: 'set',
+      path: [],
+      value: { ...defaultSettings, model: 'jev', ledgerLimit: 100_000 },
+    },
+  ])
+}
+
+function testAnUnwritableNamespaceIsReadOnly(): void {
+  expect.hasAssertions()
+  const fake = fakeScope(false)
+  renderPage(fake.scope, fakeApi().api)
+
+  // The form must say so rather than offer a button that cannot land.
+  expect(screen.getByText('settingsReadOnly')).toBeDefined()
+  expect(input('modelLabel').disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'save' }).hasAttribute('disabled')).toBe(true)
 }
 
 async function testFailedSaveKeepsTheDraftAndReports(): Promise<void> {
@@ -265,7 +290,7 @@ function testCleanFormFollowsAHostChange(): void {
    * assertion reads the DOM before React has committed.
    */
   act(() => {
-    fake.setSnapshot(snapshot('changed on the host'))
+    fake.setSection(snapshot('changed on the host'))
     fake.notify()
   })
   expect(input('modelLabel').value).toBe('changed on the host')
@@ -276,7 +301,7 @@ function testTwoProvidersDoNotShareState(): void {
   expect.hasAssertions()
   const first = fakeScope()
   const second = fakeScope()
-  second.setSnapshot(snapshot('second'))
+  second.setSection(snapshot('second'))
 
   render(
     <SettingsStoreProvider scope={first.scope}>
@@ -314,6 +339,8 @@ describe('settings page', () => {
   it('persists the normalized draft on save', { timeout: TEST_TIMEOUT }, testSavePersistsTheNormalizedDraft)
 
   it('keeps the draft and reports the reason when a save fails', { timeout: TEST_TIMEOUT }, testFailedSaveKeepsTheDraftAndReports)
+
+  it('shows an unwritable namespace as read-only', { timeout: TEST_TIMEOUT }, testAnUnwritableNamespaceIsReadOnly)
 
   it('follows a host change while clean', { timeout: TEST_TIMEOUT }, testCleanFormFollowsAHostChange)
 

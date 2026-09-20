@@ -13,7 +13,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 
 import { createUsageApi } from './api.ts'
-import type { SettingsScope } from './contracts.ts'
 import {
   isLocaleService,
   isSettingsScopeBinder,
@@ -23,8 +22,7 @@ import { createCredentialApi, isCredentialNamespace } from './credentials.ts'
 import { LOCALE_NAMESPACE, locales } from './locale.ts'
 import { SettingsPage } from './settings-page.tsx'
 import { installStyles } from './styles.ts'
-import type { ClientSettings } from './settings.ts'
-import { normalizeSettings } from './settings.ts'
+import { normalizeScope } from './settings.ts'
 
 /** Client plugin name; keep this stable after publishing. */
 const name = 'jev-client'
@@ -72,28 +70,6 @@ function requireService<TService>(
 }
 
 /**
- * Wrap a raw scope so callers always see a complete settings value.
- *
- * Normalizing at this boundary is what lets the page assume a valid snapshot:
- * missing, legacy and wrongly-typed stored values are resolved once here rather
- * than defended against in every render.
- *
- * @param raw - The scope bound by the host.
- * @returns A scope whose snapshots are normalized.
- */
-function normalizedScope(
-  raw: SettingsScope<unknown>,
-): SettingsScope<ClientSettings> {
-  return {
-    getSnapshot: () => normalizeSettings(raw.getSnapshot()),
-    subscribe: (listener: () => void) => raw.subscribe(listener),
-    mutate: async (value: ClientSettings): Promise<void> => {
-      await raw.mutate(value)
-    },
-  }
-}
-
-/**
  * Register this package's browser face.
  *
  * Every registration goes through `ctx.effect`, which is what ties it to the
@@ -134,7 +110,7 @@ function apply(ctx: Context): void {
   ctx.effect(() => installStyles(), 'client: styles')
 
   const translate = locale.bind(LOCALE_NAMESPACE)
-  const scope = normalizedScope(binder.bind({ namespace: SETTINGS_NAMESPACE }))
+  const scope = normalizeScope(binder.bind({ namespace: SETTINGS_NAMESPACE }))
   /*
    * The route reads are stateless, so one set per fiber is enough: every mount
    * of the page shares the same read-only endpoints, and nothing here holds

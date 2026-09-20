@@ -17,7 +17,11 @@
 import { createStore } from 'zustand/vanilla'
 import type { StoreApi } from 'zustand/vanilla'
 
-import type { SettingsScope } from './contracts.ts'
+import type {
+  SettingsScope,
+  SettingsScopeSnapshot,
+  SettingsScopeStatus,
+} from './contracts.ts'
 import type {
   ClientSettings,
   DraftSettings,
@@ -40,6 +44,15 @@ interface SettingsState {
    */
   draftOrigin: ClientSettings
   /** Whether the normalized draft differs from what the host holds. */ dirty: boolean
+  /**
+   * Whether the host document accepts writes.
+   *
+   * The host reports this per namespace; memory-mode namespaces never accept a
+   * write, and offering one there is a promise the panel cannot keep.
+   */
+  writable: boolean
+  /** How the namespace is syncing, for the read-only notice. */
+  status: SettingsScopeStatus
   /** Whether a save is in flight. */ saving: boolean
   /**
    * Reason the last save failed, `undefined` when it did not.
@@ -59,7 +72,7 @@ interface SettingsActions {
   /** Record the allowed question banks. */ setBanks: (banks: string[]) => void
   /** Discard the draft and fall back to the persisted snapshot. */ reset: () => void
   /** Persist the normalized draft through the host scope. */ save: () => Promise<void>
-  /** Adopt an externally-provided persisted snapshot. */ sync: (persisted: ClientSettings) => void
+  /** Adopt an externally-provided snapshot from the host scope. */ sync: (snapshot: SettingsScopeSnapshot<ClientSettings>) => void
 }
 
 /** Read and transition the settings state. */
@@ -194,13 +207,16 @@ function withCount(
  * @returns A store carrying the settings state and its actions.
  */
 function createSettingsStore(scope: SettingsScope<ClientSettings>): SettingsStore {
-  const initial = normalizeSettings(scope.getSnapshot())
+  const initial = scope.getSnapshot()
+  const settings = normalizeSettings(initial.value)
 
   return createStore<SettingsState & SettingsActions>()((set, get) => ({
-    persisted: initial,
-    draft: toDraft(initial),
-    draftOrigin: initial,
+    persisted: settings,
+    draft: toDraft(settings),
+    draftOrigin: settings,
     dirty: false,
+    writable: initial.writable,
+    status: initial.status,
     saving: false,
     error: undefined,
 
@@ -228,14 +244,34 @@ function createSettingsStore(scope: SettingsScope<ClientSettings>): SettingsStor
       set((state) => resetState(state))
     },
 
-    sync: (persisted: ClientSettings): void => {
-      set((state) => externalUpdate(state, persisted))
+    sync: (snapshot: SettingsScopeSnapshot<ClientSettings>): void => {
+      const persisted = normalizeSettings(snapshot.value)
+      set((state) => ({
+        ...externalUpdate(state, persisted),
+        writable: snapshot.writable,
+        status: snapshot.status,
+      }))
     },
 
     save: async (): Promise<void> => {
+      /*
+       * An unwritable namespace is never written to: the host reports memory
+       * mode and unavailable namespaces this way, and the field disables
+       * itself for both, so reaching here is a no-op rather than a failure.
+       */
+      if (!get().writable) {
+        return
+      }
       set({ saving: true, error: undefined })
       try {
-        await scope.mutate(normalizeSettings(get().draft))
+        /*
+         * One root operation replaces the whole section. The form owns every
+         * field in its namespace, so a single atomic write cannot leave the
+         * section in a half-updated state the way a per-field sequence could.
+         */
+        await scope.mutate([
+          { op: 'set', path: [], value: normalizeSettings(get().draft) },
+        ])
         set({ saving: false, dirty: false })
       } catch (error) {
         /*
@@ -264,9 +300,9 @@ function connectSettingsScope(
   store: SettingsStore,
   scope: SettingsScope<ClientSettings>,
 ): () => void {
-  store.getState().sync(normalizeSettings(scope.getSnapshot()))
+  store.getState().sync(scope.getSnapshot())
   return scope.subscribe(() => {
-    store.getState().sync(normalizeSettings(scope.getSnapshot()))
+    store.getState().sync(scope.getSnapshot())
   })
 }
 

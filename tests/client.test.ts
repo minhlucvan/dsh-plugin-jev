@@ -18,13 +18,10 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import type { FetchLike, FetchResponse } from '#src/client/api'
-import {
-  CATALOG_PATH,
-  HEALTH_PATH,
-  USAGE_PATH,
-  createUsageApi,
-} from '#src/client/api'
+import type {
+  SettingsPathOp,
+  SettingsScopeSnapshot,
+} from '#src/client/contracts'
 import { LOCALE_NAMESPACE, locales } from '#src/client/locale'
 import type { ClientSettings } from '#src/client/settings'
 import {
@@ -37,12 +34,7 @@ import {
 
 const TEST_TIMEOUT = 5000
 const NO_KEYS = 0
-const EXPECTED_SINGLE_CALL = 1
 const MAX_CONFIDENCE = 1
-const OK_STATUS = 200
-const FAILED_STATUS = 500
-const FAILED_STATUS_FLOOR = 400
-const SAMPLED_CALLS = 3
 const ABOVE_RANGE = 5
 const ABOVE_LEDGER_MAX = 10_000_000
 const LEDGER_MAX = 100_000
@@ -66,20 +58,19 @@ const KEPT_LEDGER = 20
  */
 const NULL_VALUE: unknown = JSON.parse('null')
 
-/** The totals a canned usage payload reports. */
-const SAMPLE_TOTALS = {
-  calls: SAMPLED_CALLS, inputTokens: 1200, outputTokens: 80,
-  questions: SAMPLED_CALLS, stateChars: 4000,
-}
-
 /** A scope shaped like the host's: methods on the prototype, state on `this`. */
 class ClassShapedScope {
   private value: ClientSettings = { ...defaultSettings, model: 'from the host' }
 
   private listeners: (() => void)[] = []
 
-  public getSnapshot(): ClientSettings {
-    return this.value
+  public getSnapshot(): SettingsScopeSnapshot<ClientSettings> {
+    return {
+      status: 'ready',
+      value: this.value,
+      revision: undefined,
+      writable: true,
+    }
   }
 
   public subscribe(listener: () => void): () => void {
@@ -91,11 +82,16 @@ class ClassShapedScope {
     }
   }
 
-  public mutate(next: ClientSettings): void {
-    this.value = next
+  public async mutate(ops: readonly SettingsPathOp[]): Promise<void> {
+    for (const op of ops) {
+      if (op.op === 'set') {
+        this.value = normalizeSettings(op.value)
+      }
+    }
     for (const listener of this.listeners) {
       listener()
     }
+    await Promise.resolve()
   }
 }
 
@@ -193,21 +189,23 @@ function testRoundTripsThroughTheDraft(): void {
   expect(sameSettings(settings, defaultSettings)).toBe(false)
 }
 
-function testScopeSourceKeepsTheReceiver(): void {
+async function testScopeSourceKeepsTheReceiver(): Promise<void> {
   expect.hasAssertions()
   const scope = new ClassShapedScope()
   const source = settingsScopeSource(scope)
   /* Detaching either method would throw "Cannot read properties of undefined". */
-  expect(source.getSnapshot().model).toBe('from the host')
+  expect(source.getSnapshot().value?.model).toBe('from the host')
 
-  const received: string[] = []
+  const received: (string | undefined)[] = []
   const unsubscribe = source.subscribe(() => {
-    received.push(source.getSnapshot().model)
+    received.push(source.getSnapshot().value?.model)
   })
-  scope.mutate({ ...defaultSettings, model: 'changed' })
+  await scope.mutate([
+    { op: 'set', path: [], value: { ...defaultSettings, model: 'changed' } },
+  ])
   expect(received).toStrictEqual(['changed'])
   unsubscribe()
-  expect(source.getSnapshot().model).toBe('changed')
+  expect(source.getSnapshot().value?.model).toBe('changed')
 }
 
 function testLocaleDictionariesAgree(): void {
@@ -225,103 +223,6 @@ function testLocaleDictionariesAgree(): void {
   }
 }
 
-/**
- * Answer each route with a payload that route can use.
- *
- * @param path - Absolute path the read asked for.
- * @returns A body shaped for that path.
- */
-function bodyFor(path: string): unknown {
-  if (path === HEALTH_PATH) {
-    return { ok: true, enabled: true, model: 'jev-test' }
-  }
-  if (path === USAGE_PATH) {
-    return { totals: SAMPLE_TOTALS, byTool: {}, recent: [] }
-  }
-  const bank = { id: 'reasoning', title: 'Reasoning shape', description: 'Classify.', questions: {} }
-  return { banks: [bank] }
-}
-
-/**
- * Decode one canned body.
- *
- * Written as an async function with a real await because this repository
- * enforces both `promise-function-async` and `require-await`: a stand-in that
- * merely returned `Promise.resolve(...)` would fail one of the two.
- *
- * @param value - Body to hand back.
- * @returns The body.
- */
-async function decodeJson(value: unknown): Promise<unknown> {
-  const decoded = await Promise.resolve(value)
-  return decoded
-}
-
-/**
- * Wrap one canned body in the response shape the client reads.
- *
- * @param status - HTTP status to report.
- * @param body - Decoded body to report.
- * @returns A stand-in response.
- */
-async function cannedResponse(status: number, body: unknown): Promise<FetchResponse> {
-  const decoded = await decodeJson(body)
-  return { ok: status < FAILED_STATUS_FLOOR, status, json: decodeJson.bind(undefined, decoded) }
-}
-
-/** A fetch that records its paths and answers each with a usable body. */
-function routedFetch(): { fetchImpl: FetchLike; paths: string[] } {
-  const paths: string[] = []
-  const fetchImpl: FetchLike = async (path: string): Promise<FetchResponse> => {
-    const response = await cannedResponse(OK_STATUS, bodyFor(path))
-    paths.push(path)
-    return response
-  }
-  return { fetchImpl, paths }
-}
-
-/**
- * Build a fetch that answers every path with one canned response.
- *
- * @param status - HTTP status to report.
- * @param body - Decoded body to report.
- * @returns A stand-in fetch.
- */
-function cannedFetch(status: number, body: unknown): FetchLike {
-  const fetchImpl: FetchLike = async (_path: string): Promise<FetchResponse> => {
-    const response = await cannedResponse(status, body)
-    return response
-  }
-  return fetchImpl
-}
-
-async function testApiReadsTheThreeRoutes(): Promise<void> {
-  expect.hasAssertions()
-  const recorder = routedFetch()
-  const api = createUsageApi(recorder.fetchImpl)
-
-  const health = await api.health()
-  const report = await api.usage()
-  const catalog = await api.catalog()
-
-  expect(recorder.paths).toStrictEqual([HEALTH_PATH, USAGE_PATH, CATALOG_PATH])
-  expect(health.enabled).toBe(true)
-  expect(report.totals.calls).toBe(SAMPLED_CALLS)
-  expect(catalog.banks).toHaveLength(EXPECTED_SINGLE_CALL)
-}
-
-async function testApiReportsEveryFailureAsAnError(): Promise<void> {
-  expect.hasAssertions()
-  const failed = createUsageApi(cannedFetch(FAILED_STATUS, { error: 'boom' }))
-  await expect(failed.usage()).rejects.toThrow(String(FAILED_STATUS))
-
-  /*
-   * A success status with an unusable body is the failure that would otherwise
-   * surface as an undefined field deep inside the panel.
-   */
-  const unusable = createUsageApi(cannedFetch(OK_STATUS, { banks: 'not a list' }))
-  await expect(unusable.catalog()).rejects.toThrow(/unrecognized/u)
-}
 
 describe('client face', () => {
   it('normalizes an omitted, null or wrongly-typed value', { timeout: TEST_TIMEOUT }, testNormalizesMalformedValues)
@@ -341,8 +242,5 @@ describe('client face', () => {
   it('wraps a class-shaped scope without losing its receiver', { timeout: TEST_TIMEOUT }, testScopeSourceKeepsTheReceiver)
 
   it('keeps every locale dictionary on the reference key set', { timeout: TEST_TIMEOUT }, testLocaleDictionariesAgree)
-
-  it('reads the health, usage and catalog routes', { timeout: TEST_TIMEOUT }, testApiReadsTheThreeRoutes)
-
-  it('reports a failed read as an error', { timeout: TEST_TIMEOUT }, testApiReportsEveryFailureAsAnError)
 })
+

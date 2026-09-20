@@ -71,6 +71,17 @@
       }
     },
     {
+      "files": ["src/client/settings.ts"],
+      "rules": {
+        // The persisted settings shape is a type alias rather than an interface
+        // on purpose: the write path carries it inside a JSON-shaped path
+        // operation, and TypeScript grants an implicit index signature to an
+        // object type but not to an interface. An interface would make the
+        // value unassignable to the operation that persists it.
+        "typescript/consistent-type-definitions": "off"
+      }
+    },
+    {
       "files": ["tests/**/*.ts", "tests/**/*.tsx"],
       "rules": {
         "vitest/prefer-to-be-falsy": "off",

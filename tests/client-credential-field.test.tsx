@@ -12,7 +12,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import type { CatalogReport, HealthReport, UsageApi, UsageReport } from '#src/client/api'
-import type { SettingsScope } from '#src/client/contracts'
+import type {
+  SettingsScope,
+  SettingsScopeSnapshot,
+} from '#src/client/contracts'
 import type { CredentialApi, CredentialInfo } from '#src/client/credentials'
 import type { ClientSettings } from '#src/client/settings'
 import { defaultSettings } from '#src/client/settings'
@@ -148,7 +151,12 @@ function fakeUsageApi(): UsageApi {
  */
 function fakeScope(reference: string = REFERENCE): SettingsScope<ClientSettings> {
   return {
-    getSnapshot: (): ClientSettings => ({ ...defaultSettings, apiKeyEnv: reference }),
+    getSnapshot: (): SettingsScopeSnapshot<ClientSettings> => ({
+      status: 'ready',
+      value: { ...defaultSettings, apiKeyEnv: reference },
+      revision: undefined,
+      writable: true,
+    }),
     subscribe: (): (() => void) => (): void => {
       // The page never writes in these cases, so this fake never notifies.
     },
@@ -254,6 +262,8 @@ async function testAnInheritedReferenceCannotBeEdited(): Promise<void> {
   expect(save.hasAttribute('disabled')).toBe(true)
   expect(clear.hasAttribute('disabled')).toBe(true)
   expect(input('credentialLabel').disabled).toBe(true)
+  // The reference is named, because it is the variable the user has to unset.
+  expect(screen.getByText(new RegExp(REFERENCE, 'u'))).toBeDefined()
 }
 
 async function testResolvesTheReferenceFromTheStoredSettings(): Promise<void> {

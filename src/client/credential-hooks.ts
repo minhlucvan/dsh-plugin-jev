@@ -22,7 +22,7 @@ import type { SettingsState } from './store.ts'
 /** The credential state the API-key field renders from. */
 type CredentialSlice = Pick<
   CredentialState,
-  'status' | 'configured' | 'source' | 'writable' | 'draft' | 'busy' | 'error'
+  'ref' | 'status' | 'configured' | 'source' | 'writable' | 'draft' | 'busy' | 'error'
 >
 
 /** The credential transitions the API-key field invokes. */
@@ -54,6 +54,7 @@ function useCredentialField(): CredentialFieldBinding {
   const field = useStore(
     useCredentialStore(),
     useShallow((state: CredentialState & CredentialActions): CredentialFieldBinding => ({
+      ref: state.ref,
       status: state.status,
       configured: state.configured,
       source: state.source,

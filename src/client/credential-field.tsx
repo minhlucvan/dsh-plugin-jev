@@ -128,6 +128,13 @@ function CredentialStatus({
     <div className='jev-status'>
       <p role='status'>{translate(credentialStateKey(state.configured))}</p>
       <CredentialSource state={state} translate={translate} />
+      {/*
+        The reference is the one thing a user needs to act on a read-only key:
+        it names the environment variable that has to go.
+      */}
+      <p>
+        {translate('credentialReference')}: {state.ref}
+      </p>
       <p>{translate(credentialWritabilityKey(state.writable))}</p>
     </div>
   )

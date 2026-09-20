@@ -17,7 +17,10 @@ import type {
   UsageApi,
   UsageReport,
 } from '#src/client/api'
-import type { SettingsScope } from '#src/client/contracts'
+import type {
+  SettingsScope,
+  SettingsScopeSnapshot,
+} from '#src/client/contracts'
 import type { CredentialApi, CredentialInfo } from '#src/client/credentials'
 import type { ClientSettings } from '#src/client/settings'
 import { defaultSettings } from '#src/client/settings'
@@ -121,12 +124,17 @@ interface FakeScope {
  * @returns The fake scope plus its recorder.
  */
 function fakeScope(settings: ClientSettings): FakeScope {
-  const mutate = vi.fn<(value: ClientSettings) => Promise<void>>(async (): Promise<void> => {
+  const mutate = vi.fn<(ops: readonly unknown[]) => Promise<void>>(async (): Promise<void> => {
     await Promise.resolve()
   })
   return {
     scope: {
-      getSnapshot: (): ClientSettings => settings,
+      getSnapshot: (): SettingsScopeSnapshot<ClientSettings> => ({
+        status: 'ready',
+        value: settings,
+        revision: undefined,
+        writable: true,
+      }),
       subscribe: (): (() => void) => (): void => {
         // These cases never change settings behind the page, so it never notifies.
       },
@@ -170,13 +178,36 @@ function input(label: string): HTMLInputElement {
 }
 
 /**
- * Read the snapshot the page last wrote to the host.
+ * Whether a value is an indexable object.
+ *
+ * @param value - Candidate value.
+ * @returns True for a non-null, non-array object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Read the section the page last wrote to the host.
+ *
+ * The scope takes ordered path operations, so the section is the value of the
+ * operation the form sends — one root set, not a bare object.
  *
  * @param mutate - The scope's write recorder.
- * @returns The written snapshot, once there is one.
+ * @returns The written section, once there is one.
  */
 function writtenSettings(mutate: ReturnType<typeof vi.fn>): unknown {
-  return mutate.mock.calls[FIRST_INDEX]?.[FIRST_INDEX]
+  const ops: unknown = mutate.mock.calls[FIRST_INDEX]?.[FIRST_INDEX]
+  if (!Array.isArray(ops)) {
+    return undefined
+  }
+  let written: unknown = undefined
+  for (const op of ops) {
+    if (isRecord(op) && op.op === 'set') {
+      written = op.value
+    }
+  }
+  return written
 }
 
 /**
