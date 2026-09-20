@@ -16,6 +16,7 @@ import type { BenchmarkItem } from './corpus.ts'
  */
 const EXPLORING_TASK: BenchmarkItem = {
   id: 'exploring',
+  task: 'exploring',
   title: 'Exploring — scope an unfamiliar task',
   state: {
     request: 'The export button does nothing on staging. Work out why and fix it.',

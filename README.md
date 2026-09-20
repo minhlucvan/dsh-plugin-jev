@@ -108,78 +108,41 @@ patches over. Set `enabled: false` to mount it with no credential at all.
 
 ## Benchmarks
 
-Four decisions a coding agent makes every day, answered with and without Jev.
-Three are covered by a shipped question bank and measured against the live API;
-the fourth, a nine-question composite fan-out, has no bank, so only the ad-hoc
-arm answers it and its figures are modelled.
+Four decisions a coding agent makes every day, priced under five ways of getting
+them answered — on dollars, seconds, tokens, **and whether the answers were
+right**. Jev's figures are measured against the live API; the baseline (the agent
+reasoning it out itself) is modelled from the reference reasoning the corpus
+ships. The full report, the method and the caveats live in
+[BENCHMARK.md](BENCHMARK.md).
 
-| Task | Decisions | Cost | Time | Tokens |
-| --- | ---: | ---: | ---: | ---: |
-| **Coding** — classify a change before reporting it | 5 | $0.000309 → $0.000144 | 7.0s → 2.5s | 1,013 → 1,217 |
-| **Testing** — triage a failing test | 4 | $0.000262 → $0.000158 | 5.5s → 3.7s | 925 → 1,205 |
-| **Exploring** — scope an unfamiliar task | 6 | $0.000347 → $0.000135 | 7.6s → 2.1s | 1,169 → 1,279 |
-| **All three** | **15** | **$0.000917 → $0.000437** | **20.1s → 8.5s** | **3,107 → 3,701** |
-| **Jev vs without** | | **−52%** | **−58%** | **+19%** |
+### What to ship
 
-Every cell reads *without Jev → with Jev*, using the bank tool. **Half the cost,
-less than half the time — while moving 19% more tokens.** That is not a
-contradiction: Jev's tokens cost **$0.042/Mtok against $0.15–0.60** for the agent
-model, and its output is free, so the tokens it adds are the cheap kind and the
-ones it removes are the expensive kind.
+| Shape | What it does | Cost | Time | Answers matched |
+| --- | --- | ---: | ---: | ---: |
+| **Bank call** | one `jev_reason` call naming a shipped bank | **+52.4%** | **+59.8%** | 86.7% (13/15) |
+| Bank + fallback | the bank call, then the model re-reasons the low-confidence answers | −1.5% | +14.5% | 86.7% (13/15) |
+| Ad-hoc call | one `jev_ask` call whose questions the model writes itself | −51.5% | −117.8% | 83.3% (20/24) |
+| Call per question | one call per question, the state re-sent every time | −167.4% | −287.6% | 83.3% (20/24) |
+| Reason it out | no call at all — the baseline every row is measured against | — | — | — |
 
-**Comparing** is absent from that table: no shipped bank covers a nine-question
-fan-out, so the bank shape cannot answer it.
+Positive is better, and each shape is compared against reasoning *its own*
+scenarios out. Over the three scenarios a bank covers — 15 decisions:
 
-### The other shape, for contrast
+- **A bank call is 52% cheaper and 60% faster** than reasoning the same decisions
+  out, while moving 19% *more* tokens. Those extra tokens cost $0.042/Mtok and
+  Jev's output is free; the tokens it removes cost $0.15–0.60/Mtok. That is not a
+  contradiction, it is the whole trade.
+- **Writing the questions yourself is 52% dearer than not delegating at all.**
+  Generated tokens are the entire difference between the two Jev shapes.
+- **A call per question costs 1.8× one batched call and 10.8× the bank call.**
+  Nine atomic questions about one state are one request, not nine.
+- **The fallback is not free.** At the shipped confirm floor 7 of 15 answers were
+  handed back, and re-reasoning them took the saving from +52.4% to −1.5%. The
+  break-even is 40% of decisions on cost, 60% on wall-clock: use a fallback
+  deliberately, or lower the threshold.
 
-Asking ad-hoc questions with the free-form tool inverts all three axes, over the
-same three bank-covered tasks: the agent then writes the state and the question
-text itself, so it is slower *and* dearer than simply reasoning in context.
-
-| | Cost | Time | Tokens |
-| --- | ---: | ---: | ---: |
-| Without Jev | $0.000917 | 20.1s | 3,107 |
-| With an ad-hoc call | $0.001185 | 35.0s | 4,948 |
-| **Jev vs without** | **−29%** | **−75%** | **−59%** |
-
-### The modelled run
-
-The composite fan-out changes the whole-corpus totals, so `pnpm run bench`
-(the modelled, no-network run) prints these figures. A `--live` run replaces
-the Jev column with what the API actually reported.
-
-| | Cost | Time | Tokens |
-| --- | ---: | ---: | ---: |
-| Without Jev — all 4 scenarios | $0.001759 | 36.3s | 6,274 |
-| With Jev — all 4 scenarios | $0.002621 | 81.2s | 8,918 |
-| **Jev vs without** | **−49.0%** | **−123.4%** | **−42.1%** |
-| Without Jev — the 3 bank scenarios | $0.000917 | 20.1s | 3,107 |
-| With Jev — the 3 bank scenarios | $0.000399 | 11.2s | 2,809 |
-| **Jev vs without** | **+56.5%** | **+44.3%** | **+9.6%** |
-
-Positive is better for Jev on every axis. Nine separate judgements is what the
-composite pattern is for, and it is also the case the bank shape cannot reach:
-the ad-hoc arm writes the state and the nine questions itself, which is why the
-whole-corpus row stays behind reasoning in context while the bank row does not.
-
-### The rule
-
-**Use the bank tool.** A bank keeps the question definitions — option maps, level
-ladders, criteria prose — inside the package instead of inside the agent's own
-output, and generated tokens are the expensive ones. That one choice is the
-difference between delegating being cheaper than reasoning and being dearer.
-
-### The tasks
-
-Each is a state plus the atomic questions a caller would ask about it. The
-reference reasoning the baseline arm is priced from ships beside it as data.
-
-| Task | The state | The decisions |
-| --- | --- | --- |
-| **Coding** | a four-file performance change to an auth path the HTTP API and the CLI both import | what kind of change it is, how far it can reach, whether it needs a migration, how hard it must be checked, whether it does one thing |
-| **Testing** | one failure in an otherwise green run, on the branch whose change it covers | what caused it, how much the test actually asserts, whether it catches the regression, whether it needs integration |
-| **Exploring** | a one-line bug report against a 140k-line repo, no logs, no access to the failing environment | what kind of work, is the context sufficient, is external data needed, how costly an error is, is it ambiguous, is it decomposable |
-| **Comparing** | a save that fails one time in five, with three files that all write the same table | how likely each file holds the cause, how well each explains the exact symptom, how cheap a safe change in each would be |
+The rule the numbers support: **keep the question definitions in the package, and
+ask about one state once.**
 
 ### Prices used
 
@@ -188,30 +151,28 @@ reference reasoning the baseline arm is priced from ships beside it as data.
 | Jev | $0.042 / Mtok | free |
 | Agent model (DeepSeek Flash, off-peak) | $0.15 / Mtok | $0.60 / Mtok |
 
-Peak hours double the DeepSeek rates and leave Jev's unchanged, which moves the
-comparison further in Jev's favour. Every figure is a flag:
---llm-input-price, --llm-output-price, --jev-input-price, --tokens-per-second,
---jev-latency.
-
-### What is measured, and what is modelled
-
-Jev's tokens **and round trips** are measured by --live. The baseline is
-**modelled** from the reference reasoning shipped beside each task in
-src/benchmark/items-coding.ts, items-testing.ts, items-exploring.ts and
-items-comparing.ts — read it,
-disagree with it, replace it with --trace <file>, and re-run. Time is generated
-tokens divided by --tokens-per-second (default 50) plus the Jev round trip; that
-throughput is the assumption most worth checking against your own deployment.
+Peak hours double the agent model's rates and leave Jev's unchanged, which moves
+the comparison further in Jev's favour. Every figure is a flag:
+`--llm-input-price`, `--llm-output-price`, `--jev-input-price`,
+`--tokens-per-second`, `--jev-latency`, `--fallback-threshold`.
 
 ### Run it
 
 ```sh
 pnpm run build:host
-pnpm run bench                          # modelled, instant, no network
+pnpm run bench                    # modelled, instant, no network
 TYPESAFE_API_KEY=... pnpm run bench:live
-pnpm run bench -- --json | jq .bank
+pnpm run bench:live -- --out report.md
 pnpm run bench -- --llm-input-price 0.30 --llm-output-price 1.20   # peak hours
 ```
+
+Jev's tokens **and round trips** are measured by `--live`, and every answer is
+graded against the expected answer the corpus ships. The baseline is **modelled**
+from the reference reasoning shipped beside each scenario in
+`src/benchmark/items-*.ts` — read it, disagree with it, replace it with
+`--trace <file>`, and re-run. The corpus, the five shapes and the fallback curve
+are documented in [BENCHMARK.md](BENCHMARK.md).
+
 
 ### Cost inside a running session
 
@@ -258,10 +219,13 @@ plugin derives one from how far the probability sits from an even split.
 
 ### Question banks — the classification options
 
-`jev_reason` runs one of four banks shipped in the package:
+`jev_reason` runs one of six banks shipped in the package. Three are the shapes the
+benchmark prices; the other three cover decisions the benchmark does not measure.
 
 | Bank | Classifies |
 | --- | --- |
+| `change` | a code change before it is reviewed: what kind of change, how far its effects reach, whether a migration is needed, how deeply it must be checked |
+| `test` | a failing test: what caused it, is it a regression, is the test itself wrong, how much of the failure is understood |
 | `reasoning` | the shape of a task: what kind of work, is the context sufficient, is external data needed, how costly is an error, is it ambiguous, is it decomposable |
 | `answer` | a draft before it is returned: is every claim grounded, does it answer what was asked, does it overstate certainty |
 | `request` | an incoming request: intent, planning depth, whether it needs clarification |

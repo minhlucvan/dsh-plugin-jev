@@ -33,9 +33,11 @@ standalone-plugin template and follows that template's contract.
 - The credential is read through the host's credential seam, never from a value
   in configuration. The browser settings section stores it there; the plugin
   re-resolves it on every evaluation so a saved key reaches the next call.
-- The benchmark makes a public claim. Any change to a cost arm, the corpus, or
-  the assumptions must keep `pnpm run bench` honest and update the table in
-  `README.md`. Never tune the corpus to flatter the result.
+- The benchmark makes a public claim. Any change to a cost arm, a shape, the
+  corpus, or the assumptions must keep `pnpm run bench` honest and update both
+  the table in `README.md` and the measured section of `BENCHMARK.md`. Never
+  tune the corpus to flatter the result, and never drop an answer-grading result
+  because it makes the plugin look worse: the disagreements are the finding.
 - Run `pnpm run lint`, `pnpm test`, `pnpm run build`, and
   `node scripts/check-package.mjs` before publishing changes.
 

@@ -21,6 +21,7 @@ import type { BenchmarkItem } from './corpus.ts'
  */
 const CODING_CHANGE: BenchmarkItem = {
   id: 'coding',
+  task: 'coding',
   title: 'Coding — classify a change before reporting it',
   state: {
     change: {

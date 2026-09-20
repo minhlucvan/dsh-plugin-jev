@@ -53,8 +53,17 @@ All four gates must pass before a change is considered done.
 | `src/jev/catalog/` | The shipped question banks, one module each, with a registry index |
 | `src/jev/service.ts` | The `jev` service the companions inject |
 | `src/jev/tool-*.ts` | The tool definitions and their shared helpers |
-| `src/benchmark/` | Corpus, cost arms, live measurement, report rendering |
+| `src/benchmark/corpus.ts` | The scenarios, their expected answers, and their task classes |
+| `src/benchmark/approaches.ts` | The five integration shapes, priced |
+| `src/benchmark/questioning.ts` | What the model has to write, per shape |
+| `src/benchmark/live.ts` | Live measurement of every shape, and grading |
+| `src/benchmark/quality.ts` | Type-aware answer grading against the expected answer |
+| `src/benchmark/escalation.ts` | Which answers a confidence floor hands back |
+| `src/benchmark/rows.ts` / `report.ts` | Per-item pricing, then aggregation by shape and task |
+| `src/benchmark/breakeven.ts` | The fallback curve and where it stops paying |
+| `src/benchmark/sections.ts` / `method.ts` / `format.ts` / `render.ts` | The report |
 | `scripts/benchmark.mjs` | The CLI over the built benchmark module |
+| `BENCHMARK.md` | The published benchmark: prose, the measured report, the caveats |
 
 ## Hard rules
 
@@ -83,7 +92,11 @@ All four gates must pass before a change is considered done.
   the key names it.
 - **The benchmark must stay honest.** The baseline arm is modelled from
   reference reasoning that ships as data. If a change makes the result look
-  better, check whether it made the comparison worse.
+  better, check whether it made the comparison worse. Every shape is graded
+  against the corpus's expected answer as well as priced, because a cheaper shape
+  that answers the wrong question is not a cheaper integration. `BENCHMARK.md`
+  publishes the numbers; the prose around its measured report is hand-written and
+  the report section is the CLI's output.
 - **No TypeScript-only escapes.** `@ts-ignore`/`@ts-expect-error` and `any`
   leaks are lint errors.
 - **Keep documentation in sync.** Behavior changes update `README.md`,

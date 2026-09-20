@@ -1,24 +1,44 @@
 /**
  * Aggregation for the benchmark.
  *
- * The report answers three questions about the same work — what it cost in
- * dollars, how long it took, and how many tokens moved — because they do not
- * agree, and the disagreement is the finding.
+ * The report answers four questions about the same work — what it cost in
+ * dollars, how long it took, how many tokens moved, and whether the answers
+ * came out right — because they do not agree, and the disagreement is the
+ * finding. A shape only counts as better if it wins on the axes that matter and
+ * still answers correctly.
  *
- * A bank covers only the scenarios a shipped bank matches, so its totals are
- * compared against the baseline over *the same items* rather than against the
- * whole corpus. Comparing a three-item total to a five-item one would flatter
- * the bank shape for the wrong reason.
+ * Every comparison is drawn over the items *that shape can cover*, never over
+ * the whole corpus: a bank covers three scenarios, the ad-hoc shape covers
+ * four, and comparing a three-item total with a four-item one would flatter a
+ * shape for the wrong reason.
  *
  * @module dsh-plugin-jev/benchmark/report
  */
 
+import { APPROACHES, BASELINE_ARM } from './approaches.ts'
+import type { ApproachId } from './approaches.ts'
+import { EMPTY_BREAK_EVEN } from './breakeven.ts'
+import type { BreakEven } from './breakeven.ts'
 import { DEFAULT_ASSUMPTIONS, costSaving, saving, timeSaving } from './cost.ts'
 import type { ArmCost, CostAssumptions } from './cost.ts'
-import { countDecisions } from './corpus.ts'
+import { TASKS } from './corpus.ts'
+import type { BenchmarkTask } from './corpus.ts'
+import { agreementFor, armTotal, rowsFor } from './rows.ts'
+import type { BenchmarkRow } from './rows.ts'
+import type { Agreement } from './quality.ts'
 
 /** Which half of the comparison produced the Jev figures. */
 type BenchmarkMode = 'modelled' | 'measured'
+
+/** What a report is built from beyond the priced rows. */
+interface ReportOptions {
+  /** The fallback curve, when a live run produced one. */
+  breakEven?: BreakEven | undefined
+  /** Constants both arms were measured against. */
+  assumptions?: CostAssumptions | undefined
+  /** Whether the Jev figures were measured. */
+  mode?: BenchmarkMode | undefined
+}
 
 /** A difference between two arms, on one axis. */
 interface Delta {
@@ -26,30 +46,6 @@ interface Delta {
   magnitude: number
   /** Relative difference, as a percentage of the baseline. */
   percent: number
-}
-
-/** One item's result, side by side. */
-interface BenchmarkRow {
-  /** Corpus item id. */
-  id: string
-  /** Human-readable description. */
-  title: string
-  /** Atomic decisions answered for this item. */
-  decisions: number
-  /** Cost of answering them in the agent's own context. */
-  baseline: ArmCost
-  /** Cost of answering them through an ad-hoc Jev call. */
-  jev: ArmCost
-  /** Cost of answering them with a built-in bank, when one covers the item. */
-  jevBank: ArmCost | undefined
-  /** Tokens saved by the ad-hoc call. */
-  saved: Delta
-  /** Tokens saved by the bank call, when one covers the item. */
-  savedBank: Delta | undefined
-  /** Dollars saved by the ad-hoc call. */
-  costSaved: Delta
-  /** Seconds saved by the ad-hoc call. */
-  timeSaved: Delta
 }
 
 /** One arm reduced to a comparable set of totals. */
@@ -62,7 +58,7 @@ interface ArmTotals {
   tokens: number
 }
 
-/** A baseline and a Jev arm over the same items. */
+/** A baseline and one alternative over the same items. */
 interface Comparison {
   /** Items the two arms cover. */
   items: number
@@ -70,7 +66,7 @@ interface Comparison {
   decisions: number
   /** The arm that reasons in the agent's own context. */
   baseline: ArmTotals
-  /** The arm that delegates to Jev. */
+  /** The arm being compared against it. */
   jev: ArmTotals
   /** Dollars saved. */
   cost: Delta
@@ -78,6 +74,38 @@ interface Comparison {
   time: Delta
   /** Tokens saved. */
   tokens: Delta
+}
+
+/** One approach's standing against reasoning it out. */
+interface ApproachComparison extends Comparison {
+  /** Approach id. */
+  id: ApproachId
+  /** Short label. */
+  label: string
+  /** One sentence describing the call shape. */
+  shape: string
+  /** How the approach's answers scored, when a live run graded them. */
+  agreement: Agreement
+  /** Decisions the approach handed back to the model. */
+  escalated: number
+}
+
+/** One task class's result under every approach that covers it. */
+interface TaskComparison {
+  /** Task class. */
+  task: BenchmarkTask
+  /** Items in this class. */
+  items: number
+  /** Decisions across them. */
+  decisions: number
+  /** Each approach's saving in this class, or how many items it covered there. */
+  cells: {
+    id: ApproachId
+    items: number
+    cost: number
+    time: number
+    tokens: number
+  }[]
 }
 
 /** The complete comparison. */
@@ -88,45 +116,18 @@ interface BenchmarkReport {
   assumptions: CostAssumptions
   /** Per-item results. */
   rows: BenchmarkRow[]
-  /** Every scenario, ad-hoc Jev against the baseline. */
-  all: Comparison
-  /** Only the scenarios a shipped bank covers. */
-  bank: Comparison
-}
-
-/** An arm cost that has been reduced to a scalar. */
-const EMPTY_ARM: ArmCost = {
-  promptTokens: 0,
-  completionTokens: 0,
-  billedInputTokens: 0,
-  totalTokens: 0,
-  costUsd: 0,
-  seconds: 0,
+  /** Every approach against the baseline, over the items it covers. */
+  approaches: ApproachComparison[]
+  /** The same comparison per task class. */
+  byTask: TaskComparison[]
+  /** How far the fallback can be pushed before the gated shape stops winning. */
+  breakEven: BreakEven
+  /** Every decision a measured shape got wrong, so a reader can check them. */
+  mismatches: ShapeMismatch[]
 }
 
 /** Count of nothing, used where a total starts empty. */
 const NONE = 0
-
-/** Increment applied when one more row has a bank. */
-const ONE = 1
-
-/**
- * Add two arm costs.
- *
- * @param left - First cost.
- * @param right - Second cost.
- * @returns The sum.
- */
-function addCost(left: ArmCost, right: ArmCost): ArmCost {
-  return {
-    promptTokens: left.promptTokens + right.promptTokens,
-    completionTokens: left.completionTokens + right.completionTokens,
-    billedInputTokens: left.billedInputTokens + right.billedInputTokens,
-    totalTokens: left.totalTokens + right.totalTokens,
-    costUsd: left.costUsd + right.costUsd,
-    seconds: left.seconds + right.seconds,
-  }
-}
 
 /**
  * Reduce one arm cost to the three comparable totals.
@@ -139,12 +140,10 @@ function totalsOf(cost: ArmCost): ArmTotals {
 }
 
 /**
- * Build one comparison from matched baseline and Jev totals.
+ * Build one comparison from matched baseline and alternative totals.
  *
- * @param items - Items the two arms cover.
- * @param decisions - Decisions across those items.
- * @param baseline - The baseline arm's cost.
- * @param jev - The Jev arm's cost.
+ * @param scope - Items and decisions the two arms cover.
+ * @param arms - The baseline and the alternative.
  * @returns The comparison.
  */
 function comparisonOf(
@@ -166,63 +165,164 @@ function comparisonOf(
 }
 
 /**
- * Build the complete report from per-item rows.
+ * Sum the decisions across a set of rows.
  *
- * @param rows - Per-item results.
- * @param assumptions - Constants both arms were measured against.
- * @param mode - Whether the Jev figures were measured.
- * @returns The report.
+ * @param rows - Rows to sum.
+ * @returns The decision count.
  */
-function buildReport(
-  rows: BenchmarkRow[],
-  assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
-  mode: BenchmarkMode = 'modelled',
-): BenchmarkReport {
-  let baseline = { ...EMPTY_ARM }
-  let jev = { ...EMPTY_ARM }
-  let bankBaseline = { ...EMPTY_ARM }
-  let bankJev = { ...EMPTY_ARM }
-  let bankItems = NONE
-  let bankDecisions = NONE
+function decisionsOf(rows: readonly BenchmarkRow[]): number {
+  return rows.reduce((total, row) => total + row.decisions, NONE)
+}
 
+/**
+ * Count the decisions one approach handed back to the model.
+ *
+ * @param id - Approach id.
+ * @param rows - The rows it covers.
+ * @returns The count; only the fallback shape hands anything back.
+ */
+function keptFor(id: ApproachId, rows: readonly BenchmarkRow[]): number {
+  if (id !== 'gated') {
+    return NONE
+  }
+  return rows.reduce((total, row) => total + row.escalated, NONE)
+}
+
+/**
+ * Compare every approach against reasoning it out.
+ *
+ * @param rows - Every row.
+ * @returns One comparison per approach, in report order.
+ */
+function approachComparisons(rows: readonly BenchmarkRow[]): ApproachComparison[] {
+  return APPROACHES.map((approach) => {
+    const covered = rowsFor(rows, approach.id)
+    const comparison = comparisonOf(
+      { items: covered.length, decisions: decisionsOf(covered) },
+      {
+        baseline: armTotal(covered, BASELINE_ARM),
+        jev: armTotal(covered, approach.id),
+      },
+    )
+    return {
+      ...comparison,
+      id: approach.id,
+      label: approach.label,
+      shape: approach.shape,
+      agreement: agreementFor(covered, approach.id),
+      /*
+       * Only the fallback shape hands answers back; the others answer every
+       * question themselves, so a row-level count would be the same number
+       * repeated under four headings.
+       */
+      escalated: keptFor(approach.id, covered),
+    }
+  })
+}
+
+/**
+ * Build the per-task matrix.
+ *
+ * @param rows - Every row.
+ * @returns One entry per task class, in corpus order.
+ */
+function taskComparisons(rows: readonly BenchmarkRow[]): TaskComparison[] {
+  return TASKS.map((task) => {
+    const inTask = rows.filter(row => row.task === task)
+    return {
+      task,
+      items: inTask.length,
+      decisions: decisionsOf(inTask),
+      cells: APPROACHES.map((approach) => {
+        const covered = rowsFor(inTask, approach.id)
+        const comparison = comparisonOf(
+          { items: covered.length, decisions: decisionsOf(covered) },
+          {
+            baseline: armTotal(covered, BASELINE_ARM),
+            jev: armTotal(covered, approach.id),
+          },
+        )
+        return {
+          id: approach.id,
+          items: covered.length,
+          cost: comparison.cost.percent,
+          time: comparison.time.percent,
+          tokens: comparison.tokens.percent,
+        }
+      }),
+    }
+  })
+}
+
+/** Every disagreement a measured shape produced, with the shape that made it. */
+interface ShapeMismatch {
+  /** Approach the disagreement came from. */
+  shape: ApproachId
+  /** Corpus item the decision belongs to. */
+  itemId: string
+  /** Question id. */
+  question: string
+  /** Answer the corpus says a careful reader reaches. */
+  expected: string
+  /** Answer the shape produced. */
+  answered: string
+}
+
+/**
+ * Collect every disagreement a measured shape produced.
+ *
+ * @param rows - Every row.
+ * @returns One entry per disagreement, grouped by item and shape.
+ */
+function mismatchesIn(rows: readonly BenchmarkRow[]): ShapeMismatch[] {
+  const found: ShapeMismatch[] = []
   for (const row of rows) {
-    baseline = addCost(baseline, row.baseline)
-    jev = addCost(jev, row.jev)
-    if (row.jevBank !== undefined) {
-      bankItems += ONE
-      bankDecisions += row.decisions
-      bankBaseline = addCost(bankBaseline, row.baseline)
-      bankJev = addCost(bankJev, row.jevBank)
+    for (const approach of APPROACHES) {
+      for (const miss of row.mismatches[approach.id]) {
+        found.push({ shape: approach.id, itemId: row.id, ...miss })
+      }
     }
   }
+  return found
+}
 
+/**
+ * Build the complete report.
+ *
+ * @param rows - Per-item results, every approach priced.
+ * @param options - The fallback curve, the constants, and whether it was measured.
+ * @returns The report.
+ */
+function buildReport(rows: BenchmarkRow[], options: ReportOptions = {}): BenchmarkReport {
+  const assumptions = options.assumptions ?? DEFAULT_ASSUMPTIONS
+  const mode = options.mode ?? 'modelled'
   return {
     mode,
     assumptions,
     rows,
-    all: comparisonOf(
-      { items: rows.length, decisions: countDecisions() },
-      { baseline, jev },
-    ),
-    bank: comparisonOf(
-      { items: bankItems, decisions: bankDecisions },
-      { baseline: bankBaseline, jev: bankJev },
-    ),
+    breakEven: options.breakEven ?? EMPTY_BREAK_EVEN,
+    approaches: approachComparisons(rows),
+    byTask: taskComparisons(rows),
+    mismatches: mismatchesIn(rows),
   }
 }
 
+
 export {
-  EMPTY_ARM,
   NONE,
-  addCost,
+  approachComparisons,
   buildReport,
   comparisonOf,
+  decisionsOf,
+  taskComparisons,
   totalsOf,
+  type ApproachComparison,
   type ArmTotals,
   type BenchmarkMode,
   type BenchmarkReport,
-  type BenchmarkRow,
   type Comparison,
   type Delta,
+  type ReportOptions,
+  type ShapeMismatch,
+  type TaskComparison,
 }
-

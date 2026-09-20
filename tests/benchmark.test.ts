@@ -2,43 +2,48 @@
  * Benchmark tests.
  *
  * The benchmark makes a public claim, so it gets a suite that pins the claim's
- * mechanics rather than its numbers: that all three axes are costed, that the
- * bank shape is cheaper than reasoning in context in both dollars and seconds,
- * and that the ad-hoc shape is not — which is the distinction the whole report
- * exists to make.
+ * mechanics rather than its numbers: that every integration shape is costed on
+ * all three axes, that a shipped bank beats writing the questions by hand, that
+ * a per-question fan-out beats neither, and that a fallback moves the gated
+ * shape monotonically towards reasoning it out. The numbers belong in the
+ * report, which is regenerated; the ordering belongs here, which is asserted.
  */
 import { existsSync } from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_ASSUMPTIONS, baselineCost, jevBankCost, jevMeasuredCost, jevModelledCost } from '#src/benchmark/cost'
-import { CORPUS, countDecisions, getItem } from '#src/benchmark/corpus'
+import {
+  APPROACHES,
+  adhocCost,
+  bankCost,
+  gatedCost,
+  reasonCost,
+  splitCost,
+} from '#src/benchmark/approaches'
+import { breakEvenOf } from '#src/benchmark/breakeven'
+import { DEFAULT_ASSUMPTIONS } from '#src/benchmark/cost'
+import { CORPUS, TASKS, countDecisions, getItem } from '#src/benchmark/corpus'
 import type { BenchmarkItem } from '#src/benchmark/corpus'
+
 import { estimateTokens } from '#src/benchmark/estimator'
 import { benchmarkSource, runModelledBenchmark } from '#src/benchmark'
 import { renderReport } from '#src/benchmark/render'
 
 const TEST_TIMEOUT = 5000
-const FIRST_INDEX = 0
-const ZERO = 0
-const EMPTY_TEXT_LENGTH = 0
+const NONE = 0
+const ONE = 1
+const ZERO_TEXT_LENGTH = 0
 const SHORT_TEXT = 'abcd'
 const EXPECTED_SHORT_TOKENS = 1
 const LONGER_TEXT = 'abcdefgh'
 const EXPECTED_LONGER_TOKENS = 2
 const CHARS_PER_TOKEN = 4
-const MEASURED_INPUT_TOKENS = 9001
-const MEASURED_LATENCY_SECONDS = 0.25
+const FLOAT_DIGITS = 10
+const FIRST_INDEX = 0
 const PRICE_MULTIPLIER = 10
-const FLOAT_DIGITS = 5
 const CORPUS_SOURCE = 'src/benchmark/corpus.ts'
 
-/** Repository root, resolved from this suite's own location. */
-const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
-
-/** The item the bank-shape assertions read. */
+/** The item a shipped bank covers. */
 const BANK_ITEM = CORPUS.find(item => item.bank !== undefined)
 
 /** How many corpus items a shipped bank covers. */
@@ -50,15 +55,16 @@ const BANK_ITEM_COUNT = CORPUS.filter(item => item.bank !== undefined).length
  * @returns The corpus item.
  */
 function bankItem(): BenchmarkItem {
-  if (BANK_ITEM === undefined) {
+  const item = BANK_ITEM
+  if (item === undefined) {
     throw new TypeError('no corpus item names a bank')
   }
-  return BANK_ITEM
+  return item
 }
 
 function testEstimatorCountsCharacters(): void {
   expect.hasAssertions()
-  expect(estimateTokens('')).toBe(EMPTY_TEXT_LENGTH)
+  expect(estimateTokens('')).toBe(ZERO_TEXT_LENGTH)
   expect(estimateTokens(SHORT_TEXT)).toBe(EXPECTED_SHORT_TOKENS)
   expect(estimateTokens(LONGER_TEXT)).toBe(EXPECTED_LONGER_TOKENS)
   expect(estimateTokens('x'.repeat(CHARS_PER_TOKEN))).toBe(EXPECTED_SHORT_TOKENS)
@@ -66,154 +72,184 @@ function testEstimatorCountsCharacters(): void {
 
 function testCorpusIsUsable(): void {
   expect.hasAssertions()
-  expect(CORPUS.length).toBeGreaterThan(ZERO)
+  expect(CORPUS.length).toBeGreaterThan(NONE)
   expect(countDecisions()).toBeGreaterThan(CORPUS.length)
   expect(getItem('coding')).toBeDefined()
+  // Every item belongs to a task class the report knows how to group.
+  expect(CORPUS.every(item => TASKS.includes(item.task))).toBe(true)
 }
 
-function testEveryAxisIsCosted(): void {
-  expect.hasAssertions()
-  const item = CORPUS[FIRST_INDEX]
-  if (item === undefined) {
-    throw new TypeError('the corpus is empty')
-  }
-  const baseline = baselineCost(item)
-  const jev = jevModelledCost(item)
-  expect(baseline.costUsd).toBeGreaterThan(ZERO)
-  expect(baseline.seconds).toBeGreaterThan(ZERO)
-  expect(baseline.billedInputTokens).toBe(ZERO)
-  expect(jev.costUsd).toBeGreaterThan(ZERO)
-  expect(jev.seconds).toBeGreaterThan(ZERO)
-}
-
-function testBanksBeatTheAdHocCall(): void {
+function testEveryShapeIsCosted(): void {
   expect.hasAssertions()
   const item = bankItem()
-  const adHoc = jevModelledCost(item)
-  const bank = jevBankCost(item)
+  for (const cost of [
+    reasonCost(item),
+    adhocCost(item),
+    bankCost(item),
+    splitCost(item),
+    gatedCost(item, { escalated: [] }),
+  ]) {
+    expect(cost?.costUsd).toBeGreaterThan(NONE)
+    expect(cost?.seconds).toBeGreaterThan(NONE)
+  }
+}
+
+function testBanksBeatWritingTheQuestions(): void {
+  expect.hasAssertions()
+  const item = bankItem()
+  const bank = bankCost(item)
+  const adhoc = adhocCost(item)
   if (bank === undefined) {
     throw new TypeError('the bank arm was not costed')
   }
-  expect(bank.totalTokens).toBeLessThan(adHoc.totalTokens)
-  expect(bank.costUsd).toBeLessThan(adHoc.costUsd)
-  expect(jevBankCost({ ...item, bank: 'missing' })).toBeUndefined()
+  // The whole claim: the same answers, the same round trip, fewer generated
+  // Tokens — and Jev input is the cheapest token in the comparison.
+  expect(bank.costUsd).toBeLessThan(adhoc.costUsd)
+  expect(bank.seconds).toBeLessThan(adhoc.seconds)
+  expect(bank.totalTokens).toBeLessThan(adhoc.totalTokens)
 }
 
-function testTheBankShapeIsCheaperInDollarsAndSeconds(): void {
+function testASplitFanOutBeatsNeither(): void {
+  expect.hasAssertions()
+  const item = bankItem()
+  const adhoc = adhocCost(item)
+  const split = splitCost(item)
+  expect(split.costUsd).toBeGreaterThan(adhoc.costUsd)
+  expect(split.seconds).toBeGreaterThan(adhoc.seconds)
+  expect(split.totalTokens).toBeGreaterThan(adhoc.totalTokens)
+}
+
+function testTheGatedShapeSitsBetweenBankAndReason(): void {
+  expect.hasAssertions()
+  const item = bankItem()
+  const bank = bankCost(item)
+  const reasoned = reasonCost(item)
+  const none = gatedCost(item, { escalated: [] })
+  const all = gatedCost(item, { escalated: Object.keys(item.questions) })
+  if (bank === undefined || none === undefined || all === undefined) {
+    throw new TypeError('the gated arm was not costed')
+  }
+  // No fallback is the bank shape; a full fallback pays for the bank call *and*
+  // The reasoning, so it is strictly worse than either alone.
+  expect(none.costUsd).toBeCloseTo(bank.costUsd, FLOAT_DIGITS)
+  expect(all.costUsd).toBeGreaterThan(reasoned.costUsd)
+  expect(all.costUsd).toBeGreaterThan(bank.costUsd)
+}
+
+function testAnItemWithoutABankIsNotPricedOnOne(): void {
+  expect.hasAssertions()
+  const item = CORPUS.find(candidate => candidate.bank === undefined)
+  if (item === undefined) {
+    throw new TypeError('every corpus item names a bank')
+  }
+  expect(bankCost(item)).toBeUndefined()
+  expect(gatedCost(item, { escalated: [] })).toBeUndefined()
+  // The shapes that need no bank still cover it.
+  expect(adhocCost(item).costUsd).toBeGreaterThan(NONE)
+  expect(splitCost(item).costUsd).toBeGreaterThan(NONE)
+}
+
+function testReportCoversEveryShape(): void {
   expect.hasAssertions()
   const report = runModelledBenchmark()
-  expect(report.bank.cost.percent).toBeGreaterThan(ZERO)
-  expect(report.bank.time.percent).toBeGreaterThan(ZERO)
-  expect(report.bank.jev.usd).toBeLessThan(report.bank.baseline.usd)
-  expect(report.bank.jev.seconds).toBeLessThan(report.bank.baseline.seconds)
+  expect(report.mode).toBe('modelled')
+  expect(report.approaches.map(entry => entry.id)).toStrictEqual(
+    APPROACHES.map(approach => approach.id),
+  )
+  const bank = report.approaches.find(entry => entry.id === 'bank')
+  const adhoc = report.approaches.find(entry => entry.id === 'adhoc')
+  // Each shape is compared over its own scenarios, never over the whole corpus.
+  expect(bank?.items).toBe(BANK_ITEM_COUNT)
+  expect(adhoc?.items).toBe(CORPUS.length)
+  expect(report.approaches.at(FIRST_INDEX)?.items).toBe(CORPUS.length)
 }
 
-function testTheAdHocShapeIsNot(): void {
+function testReportGroupsByTask(): void {
   expect.hasAssertions()
   const report = runModelledBenchmark()
-  expect(report.all.cost.percent).toBeLessThan(ZERO)
-  expect(report.all.time.percent).toBeLessThan(ZERO)
-  expect(report.all.decisions).toBeGreaterThan(ZERO)
+  expect(report.byTask.map(entry => entry.task)).toStrictEqual([...TASKS])
+  const covered = report.byTask.filter(entry => entry.items > NONE)
+  expect(covered.length).toBeGreaterThanOrEqual(ONE)
+  for (const entry of covered) {
+    expect(entry.cells).toHaveLength(APPROACHES.length)
+  }
 }
 
-function testRaisingOutputPriceHelpsJev(): void {
+function testRaisingOutputPriceHelpsAjevShape(): void {
   expect.hasAssertions()
   const cheap = runModelledBenchmark()
   const dear = runModelledBenchmark({
     ...cheap.assumptions,
     llmOutputPricePerMtok: cheap.assumptions.llmOutputPricePerMtok * PRICE_MULTIPLIER,
   })
-  expect(dear.bank.cost.percent).toBeGreaterThan(cheap.bank.cost.percent)
-  expect(dear.all.cost.percent).toBeLessThan(cheap.all.cost.percent)
+  const bankOf = (report: typeof cheap): number =>
+    report.approaches.find(entry => entry.id === 'bank')?.cost.percent ?? NONE
+  expect(bankOf(dear)).toBeGreaterThan(bankOf(cheap))
 }
 
-function testMeasuredArmReplacesTheEstimate(): void {
-  expect.hasAssertions()
-  const item = bankItem()
-  const modelled = jevModelledCost(item)
-  const measured = jevMeasuredCost(item, {
-    billedInputTokens: MEASURED_INPUT_TOKENS,
-    latencySeconds: MEASURED_LATENCY_SECONDS,
-  })
-  expect(measured.billedInputTokens).toBe(MEASURED_INPUT_TOKENS)
-  expect(measured.totalTokens).not.toBe(modelled.totalTokens)
-  expect(measured.costUsd).not.toBe(modelled.costUsd)
-  // Generation time is unchanged; only the round trip is substituted.
-  expect(measured.seconds).toBeCloseTo(
-    modelled.seconds - DEFAULT_ASSUMPTIONS.jevLatencySeconds + MEASURED_LATENCY_SECONDS,
-    FLOAT_DIGITS,
-  )
-}
-
-function testMeasuredBankArmUsesTheReportedFigures(): void {
-  expect.hasAssertions()
-  const item = bankItem()
-  const modelled = jevBankCost(item)
-  const measured = jevBankCost(item, undefined, {
-    billedInputTokens: MEASURED_INPUT_TOKENS,
-    latencySeconds: MEASURED_LATENCY_SECONDS,
-  })
-  if (measured === undefined || modelled === undefined) {
-    throw new TypeError('the bank arm was not costed')
-  }
-  expect(measured.billedInputTokens).toBe(MEASURED_INPUT_TOKENS)
-  // The measured round trip replaces the modelled one; both feed the total.
-  expect(measured.seconds).toBeCloseTo(
-    modelled.seconds - DEFAULT_ASSUMPTIONS.jevLatencySeconds + MEASURED_LATENCY_SECONDS,
-    FLOAT_DIGITS,
-  )
-}
-
-function testReportLeadsWithCostAndTime(): void {
+function testReportLeadsWithARecommendation(): void {
   expect.hasAssertions()
   const markdown = renderReport(runModelledBenchmark())
-  expect(markdown).toContain('cost, time, and tokens')
-  expect(markdown).toContain('| | Cost | Time | Tokens |')
-  expect(markdown).toContain('Jev vs without')
-  expect(markdown).toContain('Mode: **modelled**')
+  expect(markdown).toContain('## Recommendation')
+  expect(markdown).toContain('## Every shape, over what it covers')
+  expect(markdown).toContain('## Per task class')
+  expect(markdown).toContain('## Limitations')
 }
 
-function testSourcesNameShippedFiles(): void {
+function testSourcesNameOnlyShippedFiles(): void {
   expect.hasAssertions()
   const sources = benchmarkSource()
-  // These paths are published in the report, so a stale one is a visible defect.
+  // The paths are published in the report's Method section, so a stale one is a
+  // Reader-visible defect rather than a private detail.
   expect(sources).toContain(CORPUS_SOURCE)
-  expect(sources.filter(source => !existsSync(path.join(REPO_ROOT, source)))).toStrictEqual([])
+  const missing = sources.filter(
+    source => !existsSync(new URL(`../${source}`, import.meta.url)),
+  )
+  expect(missing).toStrictEqual([])
 }
 
-function testReportPricesBothCallShapes(): void {
+function testModelledRunHasNoCurveToRead(): void {
   expect.hasAssertions()
+  // The fallback curve is derived from measured confidences, so a modelled run
+  // Has none — and must not invent one.
   const report = runModelledBenchmark()
-  // The bank table prices a strict subset of the corpus, and stays the better deal.
-  expect(report.all.items).toBe(CORPUS.length)
-  expect(report.bank.items).toBe(BANK_ITEM_COUNT)
-  expect(report.bank.items).toBeLessThan(report.all.items)
-  expect(report.bank.cost.percent).toBeGreaterThan(report.all.cost.percent)
+  expect(report.breakEven.curve).toStrictEqual([])
+  expect(report.approaches.every(entry => entry.agreement.checked === NONE)).toBe(true)
+}
+
+function testBreakEvenNeedsMeasurements(): void {
+  expect.hasAssertions()
+  const curve = breakEvenOf(CORPUS, new Map(), DEFAULT_ASSUMPTIONS)
+  expect(curve.curve).toStrictEqual([])
+  expect(curve.items).toBe(NONE)
 }
 
 describe('benchmark', () => {
   it('estimates tokens from characters', { timeout: TEST_TIMEOUT }, testEstimatorCountsCharacters)
 
-  it('ships a usable corpus', { timeout: TEST_TIMEOUT }, testCorpusIsUsable)
+  it('ships a usable corpus with task classes', { timeout: TEST_TIMEOUT }, testCorpusIsUsable)
 
-  it('costs every axis of both arms', { timeout: TEST_TIMEOUT }, testEveryAxisIsCosted)
+  it('costs every shape on every axis', { timeout: TEST_TIMEOUT }, testEveryShapeIsCosted)
 
-  it('finds the bank shape cheaper than an ad-hoc call', { timeout: TEST_TIMEOUT }, testBanksBeatTheAdHocCall)
+  it('finds a bank cheaper than writing the questions', { timeout: TEST_TIMEOUT }, testBanksBeatWritingTheQuestions)
 
-  it('shows the bank shape cheaper in dollars and seconds', { timeout: TEST_TIMEOUT }, testTheBankShapeIsCheaperInDollarsAndSeconds)
+  it('finds a per-question fan-out beats neither shape', { timeout: TEST_TIMEOUT }, testASplitFanOutBeatsNeither)
 
-  it('shows the ad-hoc shape is not', { timeout: TEST_TIMEOUT }, testTheAdHocShapeIsNot)
+  it('places the gated shape between the bank and reasoning', { timeout: TEST_TIMEOUT }, testTheGatedShapeSitsBetweenBankAndReason)
 
-  it('improves Jev position when output is priced higher', { timeout: TEST_TIMEOUT }, testRaisingOutputPriceHelpsJev)
+  it('refuses to price a bank shape without a bank', { timeout: TEST_TIMEOUT }, testAnItemWithoutABankIsNotPricedOnOne)
 
-  it('replaces the estimate when the API reported usage', { timeout: TEST_TIMEOUT }, testMeasuredArmReplacesTheEstimate)
+  it('covers every shape in the report', { timeout: TEST_TIMEOUT }, testReportCoversEveryShape)
 
-  it('uses reported figures for the measured bank arm', { timeout: TEST_TIMEOUT }, testMeasuredBankArmUsesTheReportedFigures)
+  it('groups the report by task class', { timeout: TEST_TIMEOUT }, testReportGroupsByTask)
 
-  it('leads the report with cost and time', { timeout: TEST_TIMEOUT }, testReportLeadsWithCostAndTime)
+  it('moves every shape when output is priced higher', { timeout: TEST_TIMEOUT }, testRaisingOutputPriceHelpsAjevShape)
 
-  it('names only shipped corpus sources', { timeout: TEST_TIMEOUT }, testSourcesNameShippedFiles)
+  it('leads the report with a recommendation', { timeout: TEST_TIMEOUT }, testReportLeadsWithARecommendation)
 
-  it('prices both call shapes over the corpus', { timeout: TEST_TIMEOUT }, testReportPricesBothCallShapes)
+  it('names only shipped corpus sources', { timeout: TEST_TIMEOUT }, testSourcesNameOnlyShippedFiles)
+
+  it('publishes no fallback curve without measurements', { timeout: TEST_TIMEOUT }, testModelledRunHasNoCurveToRead)
+
+  it('builds no break-even curve without measurements', { timeout: TEST_TIMEOUT }, testBreakEvenNeedsMeasurements)
 })
-

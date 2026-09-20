@@ -16,6 +16,7 @@ import type { BenchmarkItem } from './corpus.ts'
  */
 const TESTING_FAILURE: BenchmarkItem = {
   id: 'testing',
+  task: 'testing',
   title: 'Testing — triage a failing test',
   state: {
     run: {

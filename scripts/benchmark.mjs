@@ -16,6 +16,7 @@
  *                              [--jev-latency <seconds>]
  *                              [--system-prompt <tokens>]
  *                              [--tool-schema <tokens>]
+ *                              [--fallback-threshold <0-1>]
  *                              [--trace <file>]
  */
 
@@ -108,6 +109,9 @@ async function loadBenchmark() {
  */
 function assumptionsFrom(defaults, argv) {
   return {
+    // Anything the flags do not name is carried through untouched, so a new
+    // assumption cannot be silently dropped by this list going stale.
+    ...defaults,
     systemPromptTokens: intFlag(argv, '--system-prompt', defaults.systemPromptTokens),
     toolSchemaTokens: intFlag(argv, '--tool-schema', defaults.toolSchemaTokens),
     llmInputPricePerMtok: numberFlag(argv, '--llm-input-price', defaults.llmInputPricePerMtok),
@@ -115,6 +119,12 @@ function assumptionsFrom(defaults, argv) {
     jevInputPricePerMtok: numberFlag(argv, '--jev-input-price', defaults.jevInputPricePerMtok),
     llmTokensPerSecond: numberFlag(argv, '--tokens-per-second', defaults.llmTokensPerSecond),
     jevLatencySeconds: numberFlag(argv, '--jev-latency', defaults.jevLatencySeconds),
+    /*
+     * Every assumption has to be carried through explicitly: the report reads
+     * its figures from this object, so a field the CLI forgets is a field the
+     * report silently reports as undefined.
+     */
+    escalationFloor: numberFlag(argv, '--fallback-threshold', defaults.escalationFloor),
   }
 }
 

@@ -130,6 +130,7 @@ const COMPARING_QUESTIONS: Record<string, JevQuestion> = {
  */
 const COMPARING_SUSPECTS: BenchmarkItem = {
   id: 'comparing',
+  task: 'investigating',
   title: 'Comparing — rank three suspects in one fan-out',
   state: {
     report: {

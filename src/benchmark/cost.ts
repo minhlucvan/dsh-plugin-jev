@@ -1,5 +1,6 @@
 /**
- * The two arms of the comparison, priced and timed.
+ * Where the priced quantities come from, and how one arm's parts become money
+ * and seconds.
  *
  * Token counts answer the wrong question. Jev bills **input only**, at a price
  * an order of magnitude below a chat model, and it produces no deliberation at
@@ -15,14 +16,11 @@
  *
  * The baseline's completion is computed from the reference reasoning the corpus
  * ships. That is the one modelled quantity, and it is labelled as modelled
- * wherever it appears in a report.
+ * wherever it appears in a report. Which *shape* a Jev call takes is priced in
+ * `./approaches.ts`.
  *
  * @module dsh-plugin-jev/benchmark/cost
  */
-
-import type { BenchmarkItem } from './corpus.ts'
-import { estimateJsonTokens, estimateTokens } from './estimator.ts'
-import { getBank } from '#src/jev/catalog'
 
 /** Token cost, dollar cost, and wall-clock cost of one arm for one item. */
 interface ArmCost {
@@ -56,6 +54,13 @@ interface CostAssumptions {
   llmTokensPerSecond: number
   /** Round-trip seconds assumed for a Jev call that was not measured. */
   jevLatencySeconds: number
+  /**
+   * Confidence below which the gated arm reasons an answer out itself.
+   *
+   * This is the profile's confirm floor, restated here because the integration
+   * question — bank alone, or bank plus a fallback — is decided by it.
+   */
+  escalationFloor: number
 }
 
 /** Tokens in one million, the unit every published price uses. */
@@ -95,6 +100,7 @@ const DEFAULT_ASSUMPTIONS: CostAssumptions = {
   jevInputPricePerMtok: 0.042,
   llmTokensPerSecond: 50,
   jevLatencySeconds: 1.5,
+  escalationFloor: 0.85,
 }
 
 /**
@@ -146,132 +152,6 @@ interface ArmParts {
   billedInputTokens: number
   /** Deployment-shaped constants. */
   assumptions: CostAssumptions
-}
-
-/**
- * Render the compact answer block a Jev tool returns to the model.
- *
- * Mirrors what the tool face actually renders: one short line per decision
- * rather than a JSON document, which is the whole point of the projection.
- *
- * @param item - Corpus item being measured.
- * @returns The model-facing summary text.
- */
-function renderedSummary(item: BenchmarkItem): string {
-  return Object.entries(item.expected)
-    .map(([id, value]) => `${id}: ${value}`)
-    .join('\n')
-}
-
-/**
- * Cost of answering the item's questions in the agent's own context.
- *
- * @param item - Corpus item being measured.
- * @param assumptions - Deployment-shaped constants.
- * @returns The baseline arm's cost.
- */
-function baselineCost(
-  item: BenchmarkItem,
-  assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
-): ArmCost {
-  const promptTokens =
-    assumptions.systemPromptTokens
-    + estimateJsonTokens(item.questions)
-    + estimateJsonTokens(item.state)
-  const reasoning = Object.values(item.baselineNotes).join('\n')
-  const completionTokens =
-    estimateTokens(reasoning) + estimateJsonTokens(item.expected)
-  return armCost({ promptTokens, completionTokens, billedInputTokens: NO_TOKENS, assumptions })
-}
-
-/**
- * Cost of answering the item's questions through an ad-hoc Jev tool call.
- *
- * The agent still writes the tool call, which restates the state and the
- * question definitions, and it still reads the result. What it does not do is
- * deliberate: the baseline's reasoning tokens have no counterpart here.
- *
- * @param item - Corpus item being measured.
- * @param assumptions - Deployment-shaped constants.
- * @returns The ad-hoc Jev arm's modelled cost.
- */
-function jevModelledCost(
-  item: BenchmarkItem,
-  assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
-): ArmCost {
-  const toolCall = { state: item.state, questions: item.questions }
-  const billedInputTokens = estimateJsonTokens({ model: 'jev-latest', ...toolCall })
-  const promptTokens =
-    assumptions.toolSchemaTokens + estimateTokens(renderedSummary(item))
-  const completionTokens = estimateJsonTokens(toolCall)
-  return armCost({ promptTokens, completionTokens, billedInputTokens, assumptions })
-}
-
-/**
- * Cost of answering with a built-in question bank.
- *
- * This is the shape the cost claim rests on. The agent sends the state and a
- * bank id, so the question definitions — option maps, level ladders, criteria
- * prose — never enter its completion. They are authored once, in the package,
- * and paid for only as Jev input, which is the cheapest token in the
- * comparison.
- *
- * @param item - Corpus item being measured.
- * @param assumptions - Deployment-shaped constants.
- * @param measuredInputTokens - Tokens the API billed, when it was measured.
- * @param latencySeconds - Measured round trip, when it was measured.
- * @returns The bank-mode cost, or undefined when no shipped bank matches.
- */
-function jevBankCost(
-  item: BenchmarkItem,
-  assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
-  measured?: MeasuredJev,
-): ArmCost | undefined {
-  if (item.bank === undefined) {
-    return undefined
-  }
-  const bank = getBank(item.bank)
-  if (bank === undefined) {
-    return undefined
-  }
-  const billedInputTokens = measured?.billedInputTokens ?? estimateJsonTokens({
-    model: 'jev-latest',
-    state: item.state,
-    questions: bank.questions,
-  })
-  const promptTokens =
-    assumptions.toolSchemaTokens + estimateTokens(renderedSummary(item))
-  const completionTokens = estimateJsonTokens({ state: item.state, bank: bank.id })
-  return armCost(
-    { promptTokens, completionTokens, billedInputTokens, assumptions },
-    measured?.latencySeconds,
-  )
-}
-
-/**
- * Cost of the ad-hoc Jev arm when TypeSafe reported real usage.
- *
- * @param item - Corpus item being measured.
- * @param billedInputTokens - `input_tokens` from the live response.
- * @param assumptions - Deployment-shaped constants.
- * @param latencySeconds - Measured round trip.
- * @returns The ad-hoc arm's measured cost.
- */
-function jevMeasuredCost(
-  item: BenchmarkItem,
-  measured: MeasuredJev,
-  assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
-): ArmCost {
-  const modelled = jevModelledCost(item, assumptions)
-  return armCost(
-    {
-      promptTokens: modelled.promptTokens,
-      completionTokens: modelled.completionTokens,
-      billedInputTokens: measured.billedInputTokens,
-      assumptions,
-    },
-    measured.latencySeconds,
-  )
 }
 
 /**
@@ -332,17 +212,11 @@ export {
   DEFAULT_ASSUMPTIONS,
   TOKENS_PER_MTOK,
   armCost,
-  baselineCost,
   costSaving,
-  jevBankCost,
-  jevMeasuredCost,
-  jevModelledCost,
-  renderedSummary,
   saving,
   timeSaving,
   type ArmCost,
   type ArmParts,
-  type MeasuredJev,
   type CostAssumptions,
+  type MeasuredJev,
 }
-
