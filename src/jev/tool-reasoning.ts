@@ -169,7 +169,7 @@ function createReasonTool(service: JevService): ToolDefinition {
       },
       bank: {
         type: 'string',
-        enum: [...BANK_IDS],
+        enum: [...service.banks],
         description:
           'Which question bank to run. "reasoning" classifies the shape of a task, "answer" '
           + 'audits a draft you wrote, "request" classifies an incoming user request, and '
@@ -205,6 +205,11 @@ function createReasonTool(service: JevService): ToolDefinition {
     isConcurrencySafe: () => true,
     async execute(args, exec) {
       const bankId = args.bank ?? DEFAULT_BANK_ID
+      if (!service.banks.includes(bankId)) {
+        throw new Error(
+          `bank "${bankId}" is not enabled; this deployment runs ${service.banks.join(', ')}`,
+        )
+      }
       const bank = getBank(bankId)
       if (bank === undefined) {
         throw new Error(

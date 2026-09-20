@@ -1,10 +1,11 @@
 /**
  * The settings section: layout only.
  *
- * It composes the three tabs — configuration, the API key, and the ledger — and
- * owns nothing else: no state, no effects, no store access. Its children read
- * the stores through hooks, which is what keeps this file stable as the panel
- * grows: adding a field is a change to the fields, not to the section.
+ * It composes the three tabs — the API key, the behavior of the plugin, and the
+ * ledger — and owns nothing else: no state, no effects, no store access. Its
+ * children read the stores through hooks, which is what keeps this file stable
+ * as the panel grows: adding a field is a change to the fields, not to the
+ * section.
  *
  * Structure and class names only. Every rule lives in `styles.ts`, so the
  * markup here reads as an outline of the panel.
@@ -31,9 +32,11 @@ interface SettingsSectionProps {
 /**
  * Build the tabs this section shows.
  *
- * The key sits in its own tab rather than under the form because it has its own
- * save action: two buttons labelled Save on one screen is a question the user
- * should not have to answer.
+ * The key opens first because it is the one thing a user has to supply: without
+ * it every other tab describes a plugin that cannot answer. It sits in its own
+ * tab rather than under the form because it has its own save action, and two
+ * buttons labelled Save on one screen is a question the user should not have to
+ * answer.
  *
  * @param translate - Translator bound to this feature's namespace.
  * @returns The tabs, in display order.
@@ -41,19 +44,19 @@ interface SettingsSectionProps {
 function tabsOf(translate: Translate): SettingsTab[] {
   return [
     {
-      id: 'settings',
-      label: translate('tabSettings'),
+      id: 'credential',
+      label: translate('tabApiKey'),
+      content: <CredentialField translate={translate} />,
+    },
+    {
+      id: 'behavior',
+      label: translate('tabBehavior'),
       content: (
         <div className='jev-group__fields'>
           <SettingsFields translate={translate} />
           <SaveControls translate={translate} />
         </div>
       ),
-    },
-    {
-      id: 'credential',
-      label: translate('tabCredential'),
-      content: <CredentialField translate={translate} />,
     },
     {
       id: 'usage',

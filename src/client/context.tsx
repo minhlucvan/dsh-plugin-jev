@@ -26,8 +26,10 @@ import { createCredentialStore } from './credential-store.ts'
 import type { CredentialApi } from './credentials.ts'
 import type { SettingsScope } from './contracts.ts'
 import type { ClientSettings } from './settings.ts'
-import type { SettingsStore, UsageStore } from './store.ts'
-import { connectSettingsScope, createSettingsStore, createUsageStore } from './store.ts'
+import type { SettingsStore } from './store.ts'
+import { connectSettingsScope, createSettingsStore } from './store.ts'
+import type { UsageStore } from './usage-store.ts'
+import { createUsageStore } from './usage-store.ts'
 
 /**
  * The scoped settings store, or `undefined` when read outside its provider.

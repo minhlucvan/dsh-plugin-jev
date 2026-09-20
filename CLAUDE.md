@@ -27,7 +27,8 @@ All four gates must pass before a change is considered done.
 | Path | Owns |
 |---|---|
 | `src/index.ts` | Loader-facing namespace: `name`, `inject`, `Config`, `apply` re-exports only |
-| `src/config.ts` | Serializable Schemastery schema, defaults, validation, `resolveConfig` |
+| `src/config.ts` | Serializable Schemastery schema, validation, `resolveConfig` |
+| `src/config-defaults.ts` | Default values and bounds for every configurable field |
 | `src/runtime.ts` | Host boundary (`PluginRuntime`), credential resolution, activation |
 | `src/tools.ts` | `./tools` companion: registration through `ctx.tools` |
 | `src/skills.ts` | `./skills` companion and the rendered skill body |
@@ -39,13 +40,17 @@ All four gates must pass before a change is considered done.
 | `src/client/` | Browser face: settings form, API-key field, and usage panel |
 | `src/client/credentials.ts` | Narrow wrapper over the generated `remote.credentials` namespace |
 | `src/client/credential-store.ts` | Credential state: reference status, draft, save and clear |
+| `src/client/settings-bounds.ts` | Boundary rules: how a stored or typed value becomes a usable one |
+| `src/client/usage-store.ts` | The ledger store the usage panel renders from |
+| `src/client/styles.ts` / `stylesheet.ts` | The panel's scoped stylesheet and the fiber-owned injector |
+| `src/client/tabs.tsx` | The settings tab list and its panel |
 | `src/jev/contracts.ts` | Wire types and response guards |
 | `src/jev/errors.ts` | `JevRequestError` and its failure classification |
 | `src/jev/transport.ts` | Deadlines, backoff, status classification, JSON decoding |
 | `src/jev/client.ts` | The evaluation client, retry recursion, response validation |
 | `src/jev/ledger.ts` | Cumulative token accounting and its self-check |
 | `src/jev/routing.ts` | Confidence thresholds, routes, answer summaries |
-| `src/jev/catalog.ts` | The four shipped question banks |
+| `src/jev/catalog/` | The shipped question banks, one module each, with a registry index |
 | `src/jev/service.ts` | The `jev` service the companions inject |
 | `src/jev/tool-*.ts` | The tool definitions and their shared helpers |
 | `src/benchmark/` | Corpus, cost arms, live measurement, report rendering |

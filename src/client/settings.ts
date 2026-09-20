@@ -10,11 +10,30 @@
  */
 
 import type { SettingsScope } from './contracts.ts'
+import {
+  ALL_BANKS,
+  normalizeBanks,
+  normalizeFlag,
+  normalizeNumber,
+  normalizeText,
+  sameBanks,
+} from './settings-bounds.ts'
+import type { NumberBounds } from './settings-bounds.ts'
 
 /** Settings this feature persists. */
 interface ClientSettings {
   /** Master switch; a disabled plugin never contacts TypeSafe. */
   enabled: boolean
+  /** Whether the agent is told, in its system prompt, to prefer Jev. */
+  adoptionPrompt: boolean
+  /**
+   * Question banks the deployment allows, by id.
+   *
+   * Empty means every bank the build ships, which is the default: the package
+   * ships a bank because its author thought the judgement worth asking, so
+   * narrowing the set is a deployment's decision rather than the package's.
+   */
+  banks: string[]
   /** Name of the environment variable holding the API key. */
   apiKeyEnv: string
   /** Model id or alias sent in the `model` field. */
@@ -39,6 +58,10 @@ interface ClientSettings {
 interface DraftSettings {
   /** Master switch. */
   enabled: boolean
+  /** Whether the agent is told to prefer Jev. */
+  adoptionPrompt: boolean
+  /** Allowed question banks, by id; empty means all of them. */
+  banks: string[]
   /** Name of the environment variable holding the API key. */
   apiKeyEnv: string
   /** Model id or alias. */
@@ -59,17 +82,17 @@ type TextFieldName = 'apiKeyEnv' | 'model' | 'baseUrl'
 /** Numeric fields, edited by a numeric text input. */
 type NumberFieldName = 'confidenceFloor' | 'confirmFloor' | 'ledgerLimit'
 
+/** Boolean fields, edited by a switch. */
+type ToggleFieldName = 'enabled' | 'adoptionPrompt'
+
 /** Every field the form edits. */
 type SettingsFieldName = keyof DraftSettings
 
-/** Inclusive bounds a numeric field must fall inside. */
-interface NumberBounds {
-  /** Inclusive lower bound. */ min: number
-  /** Inclusive upper bound. */ max: number
-}
-
 /** Whether the plugin is live when nothing is persisted. */
 const DEFAULT_ENABLED = true
+
+/** Whether the agent is told to prefer Jev when nothing is persisted. */
+const DEFAULT_ADOPTION_PROMPT = true
 
 /** Environment variable read for the API key when the profile names no other. */
 const DEFAULT_API_KEY_ENV = 'TYPESAFE_API_KEY'
@@ -112,6 +135,8 @@ const LEDGER_BOUNDS: NumberBounds = {
 /** Defaults applied when nothing is persisted or a value is unusable. */
 const defaultSettings: ClientSettings = {
   enabled: DEFAULT_ENABLED,
+  adoptionPrompt: DEFAULT_ADOPTION_PROMPT,
+  banks: [...ALL_BANKS],
   apiKeyEnv: DEFAULT_API_KEY_ENV,
   model: DEFAULT_MODEL,
   baseUrl: DEFAULT_BASE_URL,
@@ -128,89 +153,6 @@ const defaultSettings: ClientSettings = {
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-/**
- * Read a flag, falling back to its default when the stored value is unusable.
- *
- * @param value - Stored value.
- * @param fallback - Value used when the stored value is not a boolean.
- * @returns The stored flag, or the fallback.
- */
-function normalizeFlag(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') {
-    return value
-  }
-  return fallback
-}
-
-/**
- * Read a required string, falling back to its default when it is blank.
- *
- * A blank required string is not a valid setting: an empty model id or an empty
- * variable name is a value the host would reject, so it resolves to the default
- * here rather than reaching the form as an unusable empty field.
- *
- * @param value - Stored value, or text typed into the field.
- * @param fallback - Value used when the stored value is blank or unusable.
- * @returns The trimmed string, or the fallback.
- */
-function normalizeText(value: unknown, fallback: string): string {
-  if (typeof value !== 'string') {
-    return fallback
-  }
-  const trimmed = value.trim()
-  if (trimmed === '') {
-    return fallback
-  }
-  return trimmed
-}
-
-/**
- * Read a finite number from a stored value or from typed text.
- *
- * @param value - Stored value, or text typed into the field.
- * @returns The number, or `undefined` when nothing usable was found.
- */
-function readNumber(value: unknown): number | undefined {
-  if (typeof value === 'number') {
-    if (Number.isFinite(value)) {
-      return value
-    }
-    return undefined
-  }
-  if (typeof value !== 'string') {
-    return undefined
-  }
-  const trimmed = value.trim()
-  if (trimmed === '') {
-    return undefined
-  }
-  const parsed = Number(trimmed)
-  if (Number.isFinite(parsed)) {
-    return parsed
-  }
-  return undefined
-}
-
-/**
- * Normalize one numeric field into its supported range.
- *
- * @param value - Stored value, or text typed into the field.
- * @param bounds - Inclusive lower and upper bound.
- * @param fallback - Value used when nothing usable was found.
- * @returns The clamped number, or the fallback.
- */
-function normalizeNumber(
-  value: unknown,
-  bounds: NumberBounds,
-  fallback: number,
-): number {
-  const parsed = readNumber(value)
-  if (parsed === undefined) {
-    return fallback
-  }
-  return Math.min(Math.max(parsed, bounds.min), bounds.max)
 }
 
 /**
@@ -244,6 +186,8 @@ function normalizeSettings(value?: unknown): ClientSettings {
   )
   return {
     enabled: normalizeFlag(value.enabled, DEFAULT_ENABLED),
+    adoptionPrompt: normalizeFlag(value.adoptionPrompt, DEFAULT_ADOPTION_PROMPT),
+    banks: normalizeBanks(value.banks),
     apiKeyEnv: normalizeText(value.apiKeyEnv, DEFAULT_API_KEY_ENV),
     model: normalizeText(value.model, DEFAULT_MODEL),
     baseUrl: normalizeText(value.baseUrl, DEFAULT_BASE_URL),
@@ -264,6 +208,8 @@ function normalizeSettings(value?: unknown): ClientSettings {
 function toDraft(settings: ClientSettings): DraftSettings {
   return {
     enabled: settings.enabled,
+    adoptionPrompt: settings.adoptionPrompt,
+    banks: [...settings.banks],
     apiKeyEnv: settings.apiKeyEnv,
     model: settings.model,
     baseUrl: settings.baseUrl,
@@ -283,6 +229,8 @@ function toDraft(settings: ClientSettings): DraftSettings {
 function sameSettings(left: ClientSettings, right: ClientSettings): boolean {
   return (
     left.enabled === right.enabled
+    && left.adoptionPrompt === right.adoptionPrompt
+    && sameBanks(left.banks, right.banks)
     && left.apiKeyEnv === right.apiKeyEnv
     && left.model === right.model
     && left.baseUrl === right.baseUrl
@@ -334,4 +282,5 @@ export {
   type SettingsFieldName,
   type SettingsSource,
   type TextFieldName,
+  type ToggleFieldName,
 }

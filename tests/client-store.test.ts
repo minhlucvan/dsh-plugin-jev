@@ -17,10 +17,10 @@ import { defaultSettings, toDraft } from '#src/client/settings'
 import {
   connectSettingsScope,
   createSettingsStore,
-  createUsageStore,
   externalUpdate,
 } from '#src/client/store'
 import type { SettingsState } from '#src/client/store'
+import { createUsageStore } from '#src/client/usage-store'
 
 const TEST_TIMEOUT = 5000
 const EXPECTED_SINGLE_CALL = 1

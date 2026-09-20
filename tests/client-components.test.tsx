@@ -159,7 +159,7 @@ function renderPage(
   scope: SettingsScope<ClientSettings>,
   api: UsageApi,
 ): ReturnType<typeof render> {
-  return render(
+  const view = render(
     <SettingsPage
       scope={scope}
       translate={translate}
@@ -167,6 +167,9 @@ function renderPage(
       credentials={NO_CREDENTIALS}
     />,
   )
+  /* The fields live behind the behavior tab, so open it before reading them. */
+  fireEvent.click(screen.getByRole('tab', { name: 'tabBehavior' }))
+  return view
 }
 
 /**

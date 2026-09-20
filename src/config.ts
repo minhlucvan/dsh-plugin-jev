@@ -10,85 +10,34 @@
 
 import schema from '@deepseek-ai/schemastery'
 
-/** Environment variable read for the API key when the profile names no other. */
-const DEFAULT_API_KEY_ENV = 'TYPESAFE_API_KEY'
+import { BANK_IDS } from './jev/catalog/index.ts'
 
-/** TypeSafe's public evaluation endpoint. */
-const DEFAULT_BASE_URL = 'https://api.typesafe.ai'
-
-/** Model alias TypeSafe resolves to its current stable release. */
-const DEFAULT_MODEL = 'jev-latest'
-
-/** Per-attempt deadline in milliseconds. */
-const DEFAULT_TIMEOUT_MS = 30_000
-
-/** Attempts after the first one, for rate limits and transport failures. */
-const DEFAULT_MAX_RETRIES = 2
-
-/** Confidence below which an answer is never acted on without review. */
-const DEFAULT_CONFIDENCE_FLOOR = 0.5
-
-/** Confidence at or above which a high-stakes answer may act unreviewed. */
-const DEFAULT_CONFIRM_FLOOR = 0.85
-
-/** Largest state accepted, in characters. Jev's own window is 32k tokens. */
-const DEFAULT_MAX_STATE_CHARS = 200_000
-
-/** Usage entries retained for reporting; totals stay cumulative regardless. */
-const DEFAULT_LEDGER_LIMIT = 500
-
-/** Whether the agent is told, in its system prompt, to prefer Jev for decisions. */
-const DEFAULT_ADOPTION_PROMPT = true
-
-/** Lowest configurable confidence. */
-const MIN_CONFIDENCE = 0
-
-/** Highest configurable confidence. */
-const MAX_CONFIDENCE = 1
-
-/** Lowest configurable per-attempt deadline in milliseconds. */
-const MIN_TIMEOUT_MS = 1000
-
-/** Highest configurable per-attempt deadline in milliseconds. */
-const MAX_TIMEOUT_MS = 600_000
-
-/** Lowest configurable retry count. */
-const MIN_RETRIES = 0
-
-/** Highest configurable retry count. */
-const MAX_RETRIES = 10
-
-/** Smallest state limit a caller may configure, in characters. */
-const MIN_STATE_CHARS = 1000
-
-/** Smallest retention window a caller may configure. */
-const MIN_LEDGER_LIMIT = 1
-
-/** Largest retention window a caller may configure. */
-const MAX_LEDGER_LIMIT = 100_000
-
-/** Character a base URL may end with and still join cleanly. */
-const TRAILING_SLASH = '/'
-
-/** Number of characters removed when a base URL ends with a slash. */
-const LAST_CHARACTER = 1
-
-/** Index of the first character of a string. */
-const FIRST_CHARACTER = 0
-
-/** Pattern an http(s) base URL must match. */
-const HTTP_URL_PATTERN = /^https?:\/\//u
-
-/** Defaults for the fields the browser settings page can edit. */
-const USER_SETTING_DEFAULTS = {
-  enabled: true,
-  apiKeyEnv: DEFAULT_API_KEY_ENV,
-  model: DEFAULT_MODEL,
-  baseUrl: DEFAULT_BASE_URL,
-  confidenceFloor: DEFAULT_CONFIDENCE_FLOOR,
-  confirmFloor: DEFAULT_CONFIRM_FLOOR,
-  ledgerLimit: DEFAULT_LEDGER_LIMIT,
-} as const
+import {
+  DEFAULT_ADOPTION_PROMPT,
+  DEFAULT_API_KEY_ENV,
+  DEFAULT_BANKS,
+  DEFAULT_BASE_URL,
+  DEFAULT_CONFIDENCE_FLOOR,
+  DEFAULT_CONFIRM_FLOOR,
+  DEFAULT_LEDGER_LIMIT,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_MAX_STATE_CHARS,
+  DEFAULT_MODEL,
+  DEFAULT_TIMEOUT_MS,
+  FIRST_CHARACTER,
+  HTTP_URL_PATTERN,
+  LAST_CHARACTER,
+  MAX_CONFIDENCE,
+  MAX_LEDGER_LIMIT,
+  MAX_RETRIES,
+  MAX_TIMEOUT_MS,
+  MIN_CONFIDENCE,
+  MIN_LEDGER_LIMIT,
+  MIN_RETRIES,
+  MIN_STATE_CHARS,
+  MIN_TIMEOUT_MS,
+  TRAILING_SLASH,
+} from './config-defaults.ts'
 
 /** Per-tool switches, so a profile can publish only part of the tool face. */
 interface ToolSwitches {
@@ -130,6 +79,8 @@ interface Config {
   ledgerLimit?: number
   /** Whether the agent is told to prefer Jev for a narrow decision. */
   adoptionPrompt?: boolean
+  /** Ids of the question banks the agent may run; omitted means all of them. */
+  banks?: string[]
   /** Per-tool switches. */
   tools?: ToolSwitches
 }
@@ -174,6 +125,8 @@ interface ResolvedConfig {
   ledgerLimit: number
   /** Whether the agent is told to prefer Jev for a narrow decision. */
   adoptionPrompt: boolean
+  /** Ids of the question banks the agent may run. */
+  banks: string[]
   /** Per-tool switches. */
   tools: ResolvedToolSwitches
 }
@@ -199,6 +152,7 @@ const Config: schema<Config> = schema.object({
   maxStateChars: schema.number().default(DEFAULT_MAX_STATE_CHARS),
   ledgerLimit: schema.number().default(DEFAULT_LEDGER_LIMIT),
   adoptionPrompt: schema.boolean().default(DEFAULT_ADOPTION_PROMPT),
+  banks: schema.array(schema.string()).default([...DEFAULT_BANKS]),
   tools: schema.object({
     classify: schema.boolean().default(true),
     score: schema.boolean().default(true),
@@ -286,6 +240,32 @@ function assertConfig(config: ResolvedConfig): void {
   if (!HTTP_URL_PATTERN.test(config.baseUrl)) {
     throw new Error('dsh-plugin-jev: "baseUrl" must be an http(s) URL')
   }
+  for (const bank of config.banks) {
+    if (!BANK_IDS.includes(bank)) {
+      throw new Error(
+        `dsh-plugin-jev: "${bank}" is not a question bank this build ships; `
+        + `choose from ${BANK_IDS.join(', ')}`,
+      )
+    }
+  }
+}
+
+/**
+ * Read a configured value, or the default when the profile omitted it.
+ *
+ * One branch here replaces the dozen that a chain of `??` would put inside
+ * {@link resolveConfig}, which is what keeps that function's complexity in hand
+ * as fields are added.
+ *
+ * @param value - Configured value, if any.
+ * @param fallback - Value used when it is absent.
+ * @returns The configured value or the fallback.
+ */
+function or<TValue>(value: TValue | undefined, fallback: TValue): TValue {
+  if (value === undefined) {
+    return fallback
+  }
+  return value
 }
 
 /**
@@ -297,24 +277,25 @@ function assertConfig(config: ResolvedConfig): void {
 function resolveConfig(config: Config = {}): ResolvedConfig {
   const tools = config.tools ?? {}
   const resolved: ResolvedConfig = {
-    enabled: config.enabled ?? true,
-    apiKeyEnv: config.apiKeyEnv ?? DEFAULT_API_KEY_ENV,
-    baseUrl: trimTrailingSlash(config.baseUrl ?? DEFAULT_BASE_URL),
-    model: config.model ?? DEFAULT_MODEL,
-    timeoutMs: config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    maxRetries: config.maxRetries ?? DEFAULT_MAX_RETRIES,
-    confidenceFloor: config.confidenceFloor ?? DEFAULT_CONFIDENCE_FLOOR,
-    confirmFloor: config.confirmFloor ?? DEFAULT_CONFIRM_FLOOR,
-    maxStateChars: config.maxStateChars ?? DEFAULT_MAX_STATE_CHARS,
-    ledgerLimit: config.ledgerLimit ?? DEFAULT_LEDGER_LIMIT,
-    adoptionPrompt: config.adoptionPrompt ?? DEFAULT_ADOPTION_PROMPT,
+    enabled: or(config.enabled, true),
+    apiKeyEnv: or(config.apiKeyEnv, DEFAULT_API_KEY_ENV),
+    baseUrl: trimTrailingSlash(or(config.baseUrl, DEFAULT_BASE_URL)),
+    model: or(config.model, DEFAULT_MODEL),
+    timeoutMs: or(config.timeoutMs, DEFAULT_TIMEOUT_MS),
+    maxRetries: or(config.maxRetries, DEFAULT_MAX_RETRIES),
+    confidenceFloor: or(config.confidenceFloor, DEFAULT_CONFIDENCE_FLOOR),
+    confirmFloor: or(config.confirmFloor, DEFAULT_CONFIRM_FLOOR),
+    maxStateChars: or(config.maxStateChars, DEFAULT_MAX_STATE_CHARS),
+    ledgerLimit: or(config.ledgerLimit, DEFAULT_LEDGER_LIMIT),
+    adoptionPrompt: or(config.adoptionPrompt, DEFAULT_ADOPTION_PROMPT),
+    banks: [...or(config.banks, DEFAULT_BANKS)],
     tools: {
-      classify: tools.classify ?? true,
-      score: tools.score ?? true,
-      check: tools.check ?? true,
-      ask: tools.ask ?? true,
-      reason: tools.reason ?? true,
-      usage: tools.usage ?? true,
+      classify: or(tools.classify, true),
+      score: or(tools.score, true),
+      check: or(tools.check, true),
+      ask: or(tools.ask, true),
+      reason: or(tools.reason, true),
+      usage: or(tools.usage, true),
     },
   }
   assertConfig(resolved)
@@ -323,7 +304,6 @@ function resolveConfig(config: Config = {}): ResolvedConfig {
 
 export {
   Config,
-  USER_SETTING_DEFAULTS,
   resolveConfig,
   type Config as JevConfig,
   type ResolvedConfig,

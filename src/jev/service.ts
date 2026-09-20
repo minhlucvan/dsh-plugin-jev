@@ -65,6 +65,8 @@ interface JevServiceConfig {
   ledgerLimit: number
   /** Whether the agent is told to prefer Jev for a narrow decision. */
   adoptionPrompt: boolean
+  /** Ids of the question banks the agent may run. */
+  banks: readonly string[]
   /** Per-tool switches. */
   tools: JevToolSwitches
 }
@@ -105,6 +107,8 @@ interface JevService {
   readonly tools: JevToolSwitches
   /** Whether the agent is told to prefer Jev for a narrow decision. */
   readonly adoptionPrompt: boolean
+  /** Ids of the question banks the agent may run. */
+  readonly banks: readonly string[]
   /**
    * Adopt a configuration that changed while the plugin was running.
    *
@@ -223,6 +227,9 @@ function createJevService(config: JevServiceConfig, deps: JevServiceDeps): JevSe
     },
     get adoptionPrompt(): boolean {
       return current.adoptionPrompt
+    },
+    get banks(): readonly string[] {
+      return current.banks
     },
     get policy(): JevRoutingPolicy {
       return {

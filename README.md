@@ -255,6 +255,7 @@ readable at `GET /api/dsh-plugin-jev/catalog`.
 | `maxStateChars` | `200000` | refuse a larger state locally rather than bill for a rejected request |
 | `ledgerLimit` | `500` | recent entries retained; cumulative totals are unaffected |
 | `adoptionPrompt` | `true` | tell the agent, in its system prompt, to delegate a narrow decision |
+| `banks` | all six | ids of the question banks the agent may run; the rest are refused |
 | `tools.*` | all `true` | per-tool switches, so a profile publishes only part of the catalog |
 
 Every field is validated at resolution, and `confidenceFloor` may not exceed

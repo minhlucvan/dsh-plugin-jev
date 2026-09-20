@@ -6,6 +6,10 @@
  * when its selection changes by reference: subscribing to a whole state object
  * would re-render every field on every keystroke in any field.
  *
+ * The credential field's own read path lives in `./credential-hooks.ts`, and
+ * the usage panel's in `./usage-hooks.ts`: both answer to authorities other
+ * than the settings scope, and neither belongs in the form's hook set.
+ *
  * @module dsh-plugin-jev/client/hooks
  */
 
@@ -13,12 +17,18 @@ import { useCallback, useEffect } from 'react'
 import { useStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { useCredentialStore, useSettingsStore, useUsageStore } from './context.tsx'
-import type { CredentialActions, CredentialState } from './credential-store.ts'
-import { credentialReference } from './credentials.ts'
-import type { DraftSettings, NumberFieldName, TextFieldName } from './settings.ts'
+import type { CatalogBank } from './api.ts'
+import { useSettingsStore } from './context.tsx'
+import { ALL_BANKS, sameBanks } from './settings-bounds.ts'
+import type {
+  DraftSettings,
+  NumberFieldName,
+  TextFieldName,
+  ToggleFieldName,
+} from './settings.ts'
 import { toDraft } from './settings.ts'
-import type { SettingsActions, SettingsState, UsageActions, UsageState } from './store.ts'
+import type { SettingsActions, SettingsState } from './store.ts'
+import { useUsageActions, useUsageReport } from './usage-hooks.ts'
 
 /** What a text or numeric field binds to. */
 interface TextFieldBinding {
@@ -45,27 +55,6 @@ type SettingsDraftSlice = Pick<
   SettingsState,
   'draft' | 'dirty' | 'persisted' | 'saving' | 'error'
 >
-
-/** The usage state the panel renders from. */
-type UsageReportSlice = Pick<
-  UsageState,
-  'status' | 'health' | 'report' | 'banks' | 'error'
->
-
-/** The credential state the API-key field renders from. */
-type CredentialSlice = Pick<
-  CredentialState,
-  'status' | 'configured' | 'source' | 'writable' | 'draft' | 'busy' | 'error'
->
-
-/** The credential transitions the API-key field invokes. */
-type CredentialControls = Pick<
-  CredentialActions,
-  'setDraft' | 'describe' | 'save' | 'clear'
->
-
-/** What the API-key field reads and calls. */
-type CredentialFieldBinding = CredentialSlice & CredentialControls
 
 /** What the save and reset controls bind to. */
 interface SettingsControls {
@@ -135,6 +124,8 @@ function useSettingsActions(): SettingsActions {
       setText: state.setText,
       setCount: state.setCount,
       setEnabled: state.setEnabled,
+      setAdoptionPrompt: state.setAdoptionPrompt,
+      setBanks: state.setBanks,
       reset: state.reset,
       save: state.save,
       sync: state.sync,
@@ -189,25 +180,108 @@ function useNumberField(field: NumberFieldName): TextFieldBinding {
 }
 
 /**
- * Bind the master switch to the scoped store.
+ * Bind one switch to the scoped store.
  *
+ * @param field - The boolean field this binding edits.
  * @returns The switch position, editability, and change handler.
  */
-function useToggleField(): ToggleFieldBinding {
+function useToggleField(field: ToggleFieldName): ToggleFieldBinding {
   const state = useSettingsDraft()
-  const { setEnabled } = useSettingsActions()
+  const { setEnabled, setAdoptionPrompt } = useSettingsActions()
 
   const onChange = useCallback(
     (checked: boolean): void => {
-      setEnabled(checked)
+      if (field === 'enabled') {
+        setEnabled(checked)
+        return
+      }
+      setAdoptionPrompt(checked)
     },
-    [setEnabled],
+    [field, setEnabled, setAdoptionPrompt],
   )
 
   return {
-    checked: displayDraft(state).enabled,
+    checked: displayDraft(state)[field],
     disabled: state.saving,
     onChange,
+  }
+}
+
+/** Length of an empty list, named to keep it out of the magic-number rule. */
+const NONE = 0
+
+/** What the question-bank checkboxes bind to. */
+interface BanksFieldBinding {
+  /** The banks this build ships, in catalog order. */
+  banks: CatalogBank[]
+  /** Whether the catalog could not be read. */
+  failed: boolean
+  /** Whether the checkboxes are currently editable. */
+  disabled: boolean
+  /** Whether one bank is currently allowed. */
+  isOn: (id: string) => boolean
+  /** Record one bank's new position. */
+  toggle: (id: string, on: boolean) => void
+}
+
+/**
+ * Read the question banks a deployment allows.
+ *
+ * An empty selection means every bank, so the catalog decides what the form can
+ * offer and the stored ids only ever narrow it. The catalog is read here
+ * because the behavior tab can open before the usage tab ever did; a failed
+ * read leaves it empty, and repeating the request would only repeat the
+ * failure, so the read is keyed to that emptiness rather than to every render.
+ *
+ * @returns The catalog, the selection that narrows it, and the transitions the
+ *   checkboxes invoke.
+ */
+function useBanksField(): BanksFieldBinding {
+  const { banks: catalog, status } = useUsageReport()
+  const state = useSettingsDraft()
+  const { setBanks } = useSettingsActions()
+  const { load } = useUsageActions()
+  const empty = catalog.length === NONE
+
+  useEffect(() => {
+    if (empty) {
+      void load()
+    }
+  }, [empty, load])
+
+  const selected = displayDraft(state).banks
+
+  const isOn = useCallback(
+    (id: string): boolean => selected.length === NONE || selected.includes(id),
+    [selected],
+  )
+
+  const toggle = useCallback(
+    (id: string, on: boolean): void => {
+      const all = catalog.map((bank) => bank.id)
+      let current = selected
+      if (selected.length === NONE) {
+        current = all
+      }
+      const next = current.filter((candidate) => candidate !== id)
+      if (on) {
+        next.push(id)
+      }
+      if (sameBanks(next, all)) {
+        setBanks([...ALL_BANKS])
+        return
+      }
+      setBanks(next)
+    },
+    [catalog, selected, setBanks],
+  )
+
+  return {
+    banks: catalog,
+    failed: status === 'error',
+    disabled: state.saving,
+    isOn,
+    toggle,
   }
 }
 
@@ -226,100 +300,18 @@ function useSettingsControls(): SettingsControls {
   return { saving, dirty, error, save, reset }
 }
 
-/**
- * Read the credential field's state and actions.
- *
- * The reference follows the form's effective draft rather than the persisted
- * snapshot, so renaming the variable describes the new reference immediately
- * instead of only after the settings save. A describe already in flight for the
- * previous reference never publishes over the new one — the store orders them.
- *
- * @returns The credential state, and the transitions the field invokes.
- */
-function useCredentialField(): CredentialFieldBinding {
-  const reference = useStore(
-    useSettingsStore(),
-    (state: SettingsState): string =>
-      credentialReference(displayDraft(state)),
-  )
-  const field = useStore(
-    useCredentialStore(),
-    useShallow((state: CredentialState & CredentialActions): CredentialFieldBinding => ({
-      status: state.status,
-      configured: state.configured,
-      source: state.source,
-      writable: state.writable,
-      draft: state.draft,
-      busy: state.busy,
-      error: state.error,
-      setDraft: state.setDraft,
-      describe: state.describe,
-      save: state.save,
-      clear: state.clear,
-    })),
-  )
-  const { describe } = field
-
-  /*
-   * The first describe is the mount-time read, and every later reference
-   * change re-reads: both are the same call, so a stale answer cannot outlive
-   * the reference it answered for.
-   */
-  useEffect(() => {
-    void describe(reference)
-  }, [describe, reference])
-
-  return field
-}
-
-/**
- * Read only what the usage panel needs to render.
- *
- * @returns How the last read ended, and what it produced.
- */
-function useUsageReport(): UsageReportSlice {
-  return useStore(
-    useUsageStore(),
-    useShallow((state: UsageState): UsageReportSlice => ({
-      status: state.status,
-      health: state.health,
-      report: state.report,
-      banks: state.banks,
-      error: state.error,
-    })),
-  )
-}
-
-/**
- * Read the usage store's single action.
- *
- * @returns The refresh action, stable for the life of the store.
- */
-function useUsageActions(): Pick<UsageActions, 'load'> {
-  return useStore(
-    useUsageStore(),
-    useShallow((state: UsageActions): Pick<UsageActions, 'load'> => ({
-      load: state.load,
-    })),
-  )
-}
-
 export {
   displayDraft,
-  useCredentialField,
+  useBanksField,
   useNumberField,
   useSettingsActions,
   useSettingsControls,
   useSettingsDraft,
   useTextField,
   useToggleField,
-  useUsageActions,
-  useUsageReport,
-  type CredentialFieldBinding,
-  type CredentialSlice,
+  type BanksFieldBinding,
   type SettingsControls,
   type SettingsDraftSlice,
   type TextFieldBinding,
   type ToggleFieldBinding,
-  type UsageReportSlice,
 }

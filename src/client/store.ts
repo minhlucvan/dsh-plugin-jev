@@ -1,18 +1,15 @@
 /**
- * The feature's zustand stores: the single sources of truth for settings state
- * and for the usage panel.
+ * The settings store: the single source of truth for the settings form.
  *
- * Both stores are built on `zustand/vanilla` rather than `zustand`, so they
- * import no React and can be constructed and exercised in plain Node. React
- * reaches them only through `./hooks.ts`, which is what keeps this file
- * testable without a DOM and keeps the components free of state logic.
+ * It is built on `zustand/vanilla` rather than `zustand`, so it imports no
+ * React and can be constructed and exercised in plain Node. React reaches it
+ * only through the hooks, which is what keeps this file testable without a DOM
+ * and keeps the components free of state logic.
  *
  * Settings state is deliberately split: the store holds the _mutable_ draft,
  * while `SettingsScope` is the _external_ authority. `connectSettingsScope`
  * mirrors the host into the store and `save` writes back through it, so a
- * host-side change is never silently divergent. The usage store has no host
- * authority at all: it is refreshed from the package's own routes and keeps the
- * last good figures when a read fails.
+ * host-side change is never silently divergent.
  *
  * @module dsh-plugin-jev/client/store
  */
@@ -20,7 +17,6 @@
 import { createStore } from 'zustand/vanilla'
 import type { StoreApi } from 'zustand/vanilla'
 
-import type { CatalogBank, HealthReport, UsageApi, UsageReport } from './api.ts'
 import type { SettingsScope } from './contracts.ts'
 import type {
   ClientSettings,
@@ -59,6 +55,8 @@ interface SettingsActions {
   /** Record text typed into a string field. */ setText: (field: TextFieldName, value: string) => void
   /** Record text typed into a numeric field. */ setCount: (field: NumberFieldName, value: string) => void
   /** Record the master switch. */ setEnabled: (value: boolean) => void
+  /** Record the adoption-guidance switch. */ setAdoptionPrompt: (value: boolean) => void
+  /** Record the allowed question banks. */ setBanks: (banks: string[]) => void
   /** Discard the draft and fall back to the persisted snapshot. */ reset: () => void
   /** Persist the normalized draft through the host scope. */ save: () => Promise<void>
   /** Adopt an externally-provided persisted snapshot. */ sync: (persisted: ClientSettings) => void
@@ -66,30 +64,6 @@ interface SettingsActions {
 
 /** Read and transition the settings state. */
 type SettingsStore = StoreApi<SettingsState & SettingsActions>
-
-/** How the usage panel's last read ended. */
-type UsageStatus = 'loading' | 'ready' | 'error'
-
-/** Everything the usage panel renders from. */
-interface UsageState {
-  /** How the last read ended. */ status: UsageStatus
-  /** Liveness and model from the last successful read. */ health: HealthReport | undefined
-  /** Cumulative and recent usage from the last successful read. */ report: UsageReport | undefined
-  /** Question banks from the last successful read. */ banks: CatalogBank[]
-  /**
-   * Reason the last read failed, `undefined` when it did not. Required for the
-   * same reason as the settings form's error: clearing it must be expressible.
-   */
-  error: string | undefined
-}
-
-/** The state transitions the usage panel performs. */
-interface UsageActions {
-  /** Re-read health, usage and catalog from the package's routes. */ load: () => Promise<void>
-}
-
-/** Read and transition the usage panel state. */
-type UsageStore = StoreApi<UsageState & UsageActions>
 
 /**
  * Turn a thrown value into a message worth showing.
@@ -242,6 +216,14 @@ function createSettingsStore(scope: SettingsScope<ClientSettings>): SettingsStor
       set((state) => draftChange(state, { ...state.draft, enabled: value }))
     },
 
+    setAdoptionPrompt: (value: boolean): void => {
+      set((state) => draftChange(state, { ...state.draft, adoptionPrompt: value }))
+    },
+
+    setBanks: (banks: string[]): void => {
+      set((state) => draftChange(state, { ...state.draft, banks: [...banks] }))
+    },
+
     reset: (): void => {
       set((state) => resetState(state))
     },
@@ -288,51 +270,9 @@ function connectSettingsScope(
   })
 }
 
-/**
- * Build a usage store bound to one set of reads.
- *
- * @param api - The routes this panel reads.
- * @returns A store carrying the usage state and its single action.
- */
-function createUsageStore(api: UsageApi): UsageStore {
-  return createStore<UsageState & UsageActions>()((set) => ({
-    status: 'loading',
-    health: undefined,
-    report: undefined,
-    banks: [],
-    error: undefined,
-
-    load: async (): Promise<void> => {
-      set({ status: 'loading', error: undefined })
-      try {
-        const [health, report, catalog] = await Promise.all([
-          api.health(),
-          api.usage(),
-          api.catalog(),
-        ])
-        set({
-          status: 'ready',
-          health,
-          report,
-          banks: [...catalog.banks],
-          error: undefined,
-        })
-      } catch (error) {
-        /*
-         * The previous read is kept: a failed refresh has to show the reason
-         * beside the last known figures rather than blanking the panel, and a
-         * rejected read must never escape as an unhandled rejection.
-         */
-        set({ status: 'error', error: messageOf(error) })
-      }
-    },
-  }))
-}
-
 export {
   connectSettingsScope,
   createSettingsStore,
-  createUsageStore,
   draftChange,
   externalUpdate,
   messageOf,
@@ -342,8 +282,4 @@ export {
   type SettingsActions,
   type SettingsState,
   type SettingsStore,
-  type UsageActions,
-  type UsageState,
-  type UsageStatus,
-  type UsageStore,
 }

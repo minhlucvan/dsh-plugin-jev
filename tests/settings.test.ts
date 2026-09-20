@@ -25,7 +25,7 @@ import type { UserSettings } from '#src/settings'
 
 const TEST_TIMEOUT = 5000
 const FIRST_INDEX = 0
-const EDITABLE_FIELD_COUNT = 7
+const EDITABLE_FIELD_COUNT = 9
 const PROFILE_MODEL = 'jev-from-profile'
 const USER_MODEL = 'jev-from-user'
 const USER_FLOOR = 0.6

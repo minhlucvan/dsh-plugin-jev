@@ -2,7 +2,7 @@
  * Credential field component tests.
  *
  * These render the real settings page, because the field's behaviour only
- * exists at render time: the hook that follows the form's reference, the store
+ * exists at render time: the reference the stored settings resolve to, the store
  * that orders describe responses, and the disabled state a shadowed reference
  * produces. What a user must never see is pinned here too — no read path
  * renders a stored value, and a failed call shows the provider's own reason
@@ -143,11 +143,12 @@ function fakeUsageApi(): UsageApi {
 /**
  * Build a settings scope that reports the defaults.
  *
+ * @param reference - The key reference the stored settings name.
  * @returns The scope handed to the page.
  */
-function fakeScope(): SettingsScope<ClientSettings> {
+function fakeScope(reference: string = REFERENCE): SettingsScope<ClientSettings> {
   return {
-    getSnapshot: (): ClientSettings => ({ ...defaultSettings }),
+    getSnapshot: (): ClientSettings => ({ ...defaultSettings, apiKeyEnv: reference }),
     subscribe: (): (() => void) => (): void => {
       // The page never writes in these cases, so this fake never notifies.
     },
@@ -161,19 +162,23 @@ function fakeScope(): SettingsScope<ClientSettings> {
  * Render the real slot-facing page with fake host services.
  *
  * @param credentials - The credential remote to hand the page.
+ * @param reference - The key reference the stored settings name.
  * @returns The testing-library render result.
  */
-function renderPage(credentials: CredentialApi): ReturnType<typeof render> {
+function renderPage(
+  credentials: CredentialApi,
+  reference: string = REFERENCE,
+): ReturnType<typeof render> {
   const view = render(
     <SettingsPage
-      scope={fakeScope()}
+      scope={fakeScope(reference)}
       translate={translate}
       api={fakeUsageApi()}
       credentials={credentials}
     />,
   )
   /* The key lives in its own tab, so open it before reading the field. */
-  fireEvent.click(screen.getByRole('tab', { name: 'tabCredential' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'tabApiKey' }))
   return view
 }
 
@@ -251,25 +256,12 @@ async function testAnInheritedReferenceCannotBeEdited(): Promise<void> {
   expect(input('credentialLabel').disabled).toBe(true)
 }
 
-async function testTheReferenceFollowsTheApiKeyEnvField(): Promise<void> {
+async function testResolvesTheReferenceFromTheStoredSettings(): Promise<void> {
   expect.hasAssertions()
   const credentials = fakeCredentials()
-  renderPage(credentials.api)
+  renderPage(credentials.api, OTHER_REFERENCE)
   await waitFor(() => {
-    expect(credentials.described).toStrictEqual([REFERENCE])
-  })
-
-  /*
-   * The variable name is edited on the Settings tab, so the key field is
-   * unmounted while it changes and re-reads the reference when it comes back.
-   */
-  fireEvent.click(screen.getByRole('tab', { name: 'tabSettings' }))
-  fireEvent.change(input('apiKeyEnvLabel'), {
-    target: { value: OTHER_REFERENCE },
-  })
-  fireEvent.click(screen.getByRole('tab', { name: 'tabCredential' }))
-  await waitFor(() => {
-    expect(credentials.described).toContain(OTHER_REFERENCE)
+    expect(credentials.described).toStrictEqual([OTHER_REFERENCE])
   })
 }
 
@@ -297,7 +289,7 @@ describe('credential field', () => {
 
   it('disables both actions for an inherited reference', { timeout: TEST_TIMEOUT }, testAnInheritedReferenceCannotBeEdited)
 
-  it('describes the reference the apiKeyEnv field names', { timeout: TEST_TIMEOUT }, testTheReferenceFollowsTheApiKeyEnvField)
+  it('resolves the reference the stored settings name', { timeout: TEST_TIMEOUT }, testResolvesTheReferenceFromTheStoredSettings)
 
   it('removes the stored key when cleared', { timeout: TEST_TIMEOUT }, testClearingRemovesTheStoredKey)
 })

@@ -3,32 +3,43 @@
  *
  * Each field reads and writes through a hook, so none of them receives a value,
  * a change handler, or the host scope as props — which is what lets a field be
- * rendered twice, or moved, without rewiring anything. The label and hint for
- * each field are locale keys looked up in `FIELD_COPY` rather than strings
- * written here.
+ * rendered twice, or moved, without rewiring anything. Labels and hints are
+ * locale keys looked up in `FIELD_COPY`, never strings written here.
  *
- * Every field is a stacked column: label, control, help text. The host's own
- * styling lives in `styles.ts`; this file only names the parts.
+ * Every field is a stacked column: label, control, help text, with the host's
+ * own styling in `styles.ts`; this file only names the parts.
  *
  * @module dsh-plugin-jev/client/settings-fields
  */
 
 import type { ReactElement } from 'react'
 
-import { useNumberField, useTextField, useToggleField } from './hooks.ts'
+import {
+  useBanksField,
+  useNumberField,
+  useTextField,
+  useToggleField,
+} from './hooks.ts'
 import type { MessageKey } from './locale.ts'
 import type {
   NumberFieldName,
   SettingsFieldName,
   TextFieldName,
+  ToggleFieldName,
 } from './settings.ts'
 import type { Translate } from './translate.ts'
 
 /** DOM id prefix for every field, so each label points at its own input. */
 const FIELD_ID_PREFIX = 'dsh-plugin-jev'
 
-/** String fields, rendered in this order. */
-const TEXT_FIELDS: readonly TextFieldName[] = ['apiKeyEnv', 'model', 'baseUrl']
+/**
+ * String fields, rendered in this order. `apiKeyEnv` is deliberately absent:
+ * the key is typed into the API-key tab, so no user supplies a variable name.
+ */
+const TEXT_FIELDS: readonly TextFieldName[] = ['model', 'baseUrl']
+
+/** Switches, rendered in this order. */
+const TOGGLE_FIELDS: readonly ToggleFieldName[] = ['enabled', 'adoptionPrompt']
 
 /** Numeric fields, rendered in this order. */
 const NUMBER_FIELDS: readonly NumberFieldName[] = [
@@ -48,9 +59,13 @@ interface FieldCopy {
   hint: MessageKey
 }
 
-/** Copy keys for every field the form edits. */
-const FIELD_COPY: Record<SettingsFieldName, FieldCopy> = {
+/**
+ * Copy keys for every field that has copy. The bank group is built from the
+ * catalog, so its label and hint are its own keys rather than entries here.
+ */
+const FIELD_COPY: Record<Exclude<SettingsFieldName, 'banks'>, FieldCopy> = {
   enabled: { label: 'enabledLabel', hint: 'enabledHint' },
+  adoptionPrompt: { label: 'adoptionPromptLabel', hint: 'adoptionPromptHint' },
   apiKeyEnv: { label: 'apiKeyEnvLabel', hint: 'apiKeyEnvHint' },
   model: { label: 'modelLabel', hint: 'modelHint' },
   baseUrl: { label: 'baseUrlLabel', hint: 'baseUrlHint' },
@@ -75,6 +90,12 @@ interface TextFieldProps extends FieldProps {
 interface NumberFieldProps extends FieldProps {
   /** The numeric field this component edits. */
   field: NumberFieldName
+}
+
+/** Props accepted by {@link ToggleField}. */
+interface ToggleFieldProps extends FieldProps {
+  /** The boolean field this component edits. */
+  field: ToggleFieldName
 }
 
 /**
@@ -167,9 +188,8 @@ function TextField({ field, translate }: TextFieldProps): ReactElement {
 /**
  * Render one numeric field.
  *
- * The input is textual rather than `type="number"`: the browser's numeric
- * control discards partial input such as a trailing separator, which is exactly
- * the state a user passes through while typing a fraction.
+ * The input is textual rather than `type="number"`, because the browser's
+ * numeric control discards the partial input a user types through.
  *
  * @param props - The field to render and the bound translator.
  * @returns The labelled numeric input and its hint.
@@ -195,38 +215,93 @@ function NumberField({ field, translate }: NumberFieldProps): ReactElement {
 }
 
 /**
- * Render the master switch.
+ * Render one switch.
  *
  * The control and its label share a row, because a switch is read as one line;
- * its help text still sits beneath, indented to the label rather than to the
- * box.
+ * its help text still sits beneath, indented to the label rather than the box.
  *
- * @param props - The bound translator.
+ * @param props - The field to render and the bound translator.
  * @returns The labelled checkbox and its hint.
  */
-function ToggleField({ translate }: FieldProps): ReactElement {
-  const { checked, disabled, onChange } = useToggleField()
+function ToggleField({ field, translate }: ToggleFieldProps): ReactElement {
+  const { checked, disabled, onChange } = useToggleField(field)
   return (
     <div className='jev-field'>
       <div className='jev-check'>
         <input
-          id={fieldId('enabled')}
+          id={fieldId(field)}
           className='jev-check__input'
           type='checkbox'
           checked={checked}
           disabled={disabled}
-          aria-describedby={hintId('enabled')}
+          aria-describedby={hintId(field)}
           onChange={(event) => {
             onChange(event.target.checked)
           }}
         />
-        <label className='jev-field__label' htmlFor={fieldId('enabled')}>
-          {translate(FIELD_COPY.enabled.label)}
+        <label className='jev-field__label' htmlFor={fieldId(field)}>
+          {translate(FIELD_COPY[field].label)}
         </label>
       </div>
-      <p className='jev-field__hint' id={hintId('enabled')}>
-        {translate(FIELD_COPY.enabled.hint)}
+      <p className='jev-field__hint' id={hintId(field)}>
+        {translate(FIELD_COPY[field].hint)}
       </p>
+    </div>
+  )
+}
+
+/**
+ * DOM id of one bank's checkbox.
+ *
+ * @param id - The bank's own id.
+ * @returns The checkbox's id.
+ */
+function bankId(id: string): string {
+  return `${FIELD_ID_PREFIX}-bank-${id}`
+}
+
+/**
+ * Render one checkbox per question bank this build ships.
+ *
+ * An empty selection means every bank, so the boxes open checked; turning one
+ * off is what stores an explicit subset. A catalog that could not be read is
+ * reported rather than shown as an empty group, which would read as "this
+ * build ships no banks" rather than as a failed read.
+ *
+ * @param props - The bound translator.
+ * @returns The labelled bank checkboxes, or the failure notice.
+ */
+function BanksField({ translate }: FieldProps): ReactElement {
+  const { banks, failed, disabled, isOn, toggle } = useBanksField()
+  if (failed) {
+    return (
+      <div className='jev-field'>
+        <p className='jev-field__label'>{translate('banksLabel')}</p>
+        <p className='jev-alert' role='alert'>{translate('banksUnavailable')}</p>
+      </div>
+    )
+  }
+  return (
+    <div className='jev-field'>
+      <p className='jev-field__label'>{translate('banksLabel')}</p>
+      <p className='jev-field__hint'>{translate('banksHint')}</p>
+      {banks.map((bank) => (
+        <div className='jev-check' key={bank.id}>
+          <input
+            id={bankId(bank.id)}
+            className='jev-check__input'
+            type='checkbox'
+            checked={isOn(bank.id)}
+            disabled={disabled}
+            onChange={(event) => {
+              toggle(bank.id, event.target.checked)
+            }}
+          />
+          <label className='jev-field__label' htmlFor={bankId(bank.id)}>
+            {bank.title}
+          </label>
+        </div>
+      ))}
     </div>
   )
 }
@@ -238,31 +313,37 @@ function ToggleField({ translate }: FieldProps): ReactElement {
  * here plus its copy keys, not another block of JSX inside the section.
  *
  * @param props - The bound translator.
- * @returns The switch followed by the string and numeric fields.
+ * @returns The switches, the string and numeric fields, and the bank group.
  */
 function SettingsFields({ translate }: FieldProps): ReactElement {
   return (
     <>
-      <ToggleField translate={translate} />
+      {TOGGLE_FIELDS.map((field) => (
+        <ToggleField key={field} field={field} translate={translate} />
+      ))}
       {TEXT_FIELDS.map((field) => (
         <TextField key={field} field={field} translate={translate} />
       ))}
       {NUMBER_FIELDS.map((field) => (
         <NumberField key={field} field={field} translate={translate} />
       ))}
+      <BanksField translate={translate} />
     </>
   )
 }
 
 export {
+  BanksField,
   FIELD_COPY,
   NumberField,
   SettingsFields,
   TextField,
   ToggleField,
+  bankId,
   fieldId,
   hintId,
   inputClass,
   type FieldProps,
+  type ToggleFieldProps,
 }
 

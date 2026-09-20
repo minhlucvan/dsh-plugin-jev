@@ -24,7 +24,8 @@
 import type { Context } from '@deepseek-ai/cordis'
 import schema from '@deepseek-ai/schemastery'
 
-import { USER_SETTING_DEFAULTS, resolveConfig } from './config.ts'
+import { resolveConfig } from './config.ts'
+import { USER_SETTING_DEFAULTS } from './config-defaults.ts'
 import type { ResolvedConfig } from './config.ts'
 import { isRecord } from './jev/contracts.ts'
 import type { JevService } from './jev/service.ts'
@@ -39,6 +40,10 @@ const SETTINGS_NAMESPACE = 'dsh-plugin-jev'
 interface UserSettings {
   /** Master switch; a disabled plugin never contacts TypeSafe. */
   enabled: boolean
+  /** Whether the agent is told to prefer Jev for a narrow decision. */
+  adoptionPrompt: boolean
+  /** Ids of the question banks the user allows. */
+  banks: string[]
   /** Name of the environment variable holding the API key. */
   apiKeyEnv: string
   /** Model id or alias sent in the `model` field. */
@@ -56,6 +61,8 @@ interface UserSettings {
 /** Loader-visible schema for the settings section. */
 const UserSettingsSchema: schema<UserSettings> = schema.object({
   enabled: schema.boolean().default(USER_SETTING_DEFAULTS.enabled),
+  adoptionPrompt: schema.boolean().default(USER_SETTING_DEFAULTS.adoptionPrompt),
+  banks: schema.array(schema.string()).default([...USER_SETTING_DEFAULTS.banks]),
   apiKeyEnv: schema.string().default(USER_SETTING_DEFAULTS.apiKeyEnv),
   model: schema.string().default(USER_SETTING_DEFAULTS.model),
   baseUrl: schema.string().default(USER_SETTING_DEFAULTS.baseUrl),
@@ -119,6 +126,8 @@ function isSettingsProvider(value: unknown): value is SettingsProviderLike {
 function baseUserSettings(config: ResolvedConfig): UserSettings {
   return {
     enabled: config.enabled,
+    adoptionPrompt: config.adoptionPrompt,
+    banks: [...config.banks],
     apiKeyEnv: config.apiKeyEnv,
     model: config.model,
     baseUrl: config.baseUrl,

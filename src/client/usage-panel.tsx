@@ -13,9 +13,9 @@
 import type { ReactElement } from 'react'
 
 import type { HealthReport } from './api.ts'
-import { useUsageActions, useUsageReport } from './hooks.ts'
+import { useUsageActions, useUsageReport } from './usage-hooks.ts'
 import type { MessageKey } from './locale.ts'
-import type { UsageStatus } from './store.ts'
+import type { UsageStatus } from './usage-store.ts'
 import type { Translate } from './translate.ts'
 import {
   UsageByTool,

@@ -68,11 +68,8 @@ const NULL_VALUE: unknown = JSON.parse('null')
 
 /** The totals a canned usage payload reports. */
 const SAMPLE_TOTALS = {
-  calls: SAMPLED_CALLS,
-  inputTokens: 1200,
-  outputTokens: 80,
-  questions: SAMPLED_CALLS,
-  stateChars: 4000,
+  calls: SAMPLED_CALLS, inputTokens: 1200, outputTokens: 80,
+  questions: SAMPLED_CALLS, stateChars: 4000,
 }
 
 /** A scope shaped like the host's: methods on the prototype, state on `this`. */
@@ -124,6 +121,8 @@ function testNormalizesEachField(): void {
     }),
   ).toStrictEqual({
     enabled: false,
+    adoptionPrompt: true,
+    banks: [],
     apiKeyEnv: 'MY_KEY',
     model: defaultSettings.model,
     baseUrl: 'https://example.test',

@@ -11,7 +11,7 @@
 
 import type { ReactElement } from 'react'
 
-import { useUsageReport } from './hooks.ts'
+import { useUsageReport } from './usage-hooks.ts'
 import type { Translate } from './translate.ts'
 
 /** Tokens in one million, for the billed-volume figure. */

@@ -13,8 +13,8 @@
 
 import type { ReactElement } from 'react'
 
-import type { CredentialSlice } from './hooks.ts'
-import { useCredentialField } from './hooks.ts'
+import type { CredentialSlice } from './credential-hooks.ts'
+import { useCredentialField } from './credential-hooks.ts'
 import type { MessageKey } from './locale.ts'
 import type { Translate } from './translate.ts'
 

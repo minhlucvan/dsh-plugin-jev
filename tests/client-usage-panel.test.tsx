@@ -179,7 +179,7 @@ async function testPanelReportsAFailedReadWithoutThrowing(): Promise<void> {
   expect(alert.textContent).toContain('ledger offline')
   // The rest of the page is untouched by the failure.
   // The form still holds its persisted value when the user switches back.
-  fireEvent.click(screen.getByRole('tab', { name: 'tabSettings' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'tabBehavior' }))
   expect(input('modelLabel').value).toBe(defaultSettings.model)
 }
 
