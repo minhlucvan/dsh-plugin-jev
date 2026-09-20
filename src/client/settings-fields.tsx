@@ -59,12 +59,6 @@ interface FieldProps {
   translate: Translate
 }
 
-/** Props accepted by a field bound to one named setting. */
-interface NamedFieldProps extends FieldProps {
-  /** The field this component edits. */
-  field: SettingsFieldName
-}
-
 /** Props accepted by {@link TextField}. */
 interface TextFieldProps extends FieldProps {
   /** The string field this component edits. */
@@ -235,5 +229,4 @@ export {
   fieldId,
   hintId,
   type FieldProps,
-  type NamedFieldProps,
 }
