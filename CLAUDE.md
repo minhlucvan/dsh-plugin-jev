@@ -34,7 +34,10 @@ All four gates must pass before a change is considered done.
 | `src/commands.ts` | `./commands` companion: `/jev` |
 | `src/routes.ts` | `./routes` companion: the three read-only endpoints |
 | `src/invariant.ts` | `./invariant` companion: the ledger accounting identity |
-| `src/client/` | Browser face: settings form and usage panel |
+| `src/settings.ts` | Per-user settings section installed with the host settings provider |
+| `src/client/` | Browser face: settings form, API-key field, and usage panel |
+| `src/client/credentials.ts` | Narrow wrapper over the generated `remote.credentials` namespace |
+| `src/client/credential-store.ts` | Credential state: reference status, draft, save and clear |
 | `src/jev/contracts.ts` | Wire types and response guards |
 | `src/jev/errors.ts` | `JevRequestError` and its failure classification |
 | `src/jev/transport.ts` | Deadlines, backoff, status classification, JSON decoding |
@@ -61,10 +64,14 @@ All four gates must pass before a change is considered done.
   rather than reaching up to `src/config.ts`.
 - **Stay inside this repository.** No source, configuration, or documentation
   path may leave the root; no `link:` or `file:` dependencies.
-- **The credential is a name, not a value.** Configuration carries
-  `apiKeyEnv`; the runtime reads the variable. Never log, return, or commit the
-  secret. Activation fails loudly when the plugin is enabled and the variable is
-  empty.
+- **The credential is a reference, not a value.** Configuration carries
+  `apiKeyEnv`; the runtime resolves it per evaluation through `ctx.credentials`
+  when that service is mounted, and through the environment when it is not.
+  Never log, return, or commit the secret, and never cache it across calls — a
+  key saved in the settings page must reach the next call. Failure timing
+  follows the same rule: with a credential seam mounted the settings page can
+  still supply the key, so activation succeeds and the call that needs it fails;
+  without one, activation fails.
 - **The benchmark must stay honest.** The baseline arm is modelled from
   reference reasoning that ships as data. If a change makes the result look
   better, check whether it made the comparison worse.

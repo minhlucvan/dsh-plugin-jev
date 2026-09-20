@@ -10,7 +10,9 @@
  * The settings store and the usage store are separate because they have
  * different authorities: the host's persisted scope for the form, and the
  * package's own routes for the panel. Keeping them apart means a failed ledger
- * read cannot mark the form dirty, or the reverse.
+ * read cannot mark the form dirty, or the reverse. The credential store is
+ * separate for the same reason: it answers to the credential remote, not to the
+ * settings scope, and it holds a value the others must never see.
  *
  * @module dsh-plugin-jev/client/context
  */
@@ -19,6 +21,9 @@ import type { ReactElement, ReactNode } from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 
 import type { UsageApi } from './api.ts'
+import type { CredentialStore } from './credential-store.ts'
+import { createCredentialStore } from './credential-store.ts'
+import type { CredentialApi } from './credentials.ts'
 import type { SettingsScope } from './contracts.ts'
 import type { ClientSettings } from './settings.ts'
 import type { SettingsStore, UsageStore } from './store.ts'
@@ -36,6 +41,9 @@ const SettingsStoreContext = createContext<SettingsStore | undefined>(undefined)
 /** The scoped usage store, or `undefined` when read outside its provider. */
 const UsageStoreContext = createContext<UsageStore | undefined>(undefined)
 
+/** The scoped credential store, or `undefined` when read outside its provider. */
+const CredentialStoreContext = createContext<CredentialStore | undefined>(undefined)
+
 /** Props accepted by {@link SettingsStoreProvider}. */
 interface SettingsStoreProviderProps {
   /** The host's persisted settings scope this store mirrors. */
@@ -48,6 +56,14 @@ interface SettingsStoreProviderProps {
 interface UsageStoreProviderProps {
   /** The routes the panel reads. */
   api: UsageApi
+  /** The tree allowed to read the store. */
+  children: ReactNode
+}
+
+/** Props accepted by {@link CredentialStoreProvider}. */
+interface CredentialStoreProviderProps {
+  /** The credential remote this store reads and writes. */
+  api: CredentialApi
   /** The tree allowed to read the store. */
   children: ReactNode
 }
@@ -110,6 +126,29 @@ function UsageStoreProvider({
 }
 
 /**
+ * Create this instance's credential store and expose it to `children`.
+ *
+ * `api` is deliberately not an effect dependency: a store carries the remote it
+ * was built with for its whole life, and rebuilding it because a new props
+ * object arrived would discard state the user is looking at.
+ *
+ * @param props - The credential remote and the subtree to scope it to.
+ * @returns The provider element.
+ */
+function CredentialStoreProvider({
+  api,
+  children,
+}: CredentialStoreProviderProps): ReactElement {
+  const [store] = useState(() => createCredentialStore(api))
+
+  return (
+    <CredentialStoreContext.Provider value={store}>
+      {children}
+    </CredentialStoreContext.Provider>
+  )
+}
+
+/**
  * Read the scoped settings store, or fail with the reason it is missing.
  *
  * @returns The settings store for the nearest provider.
@@ -120,6 +159,23 @@ function useSettingsStore(): SettingsStore {
   if (store === undefined) {
     throw new Error(
       'useSettingsStore must be called inside a SettingsStoreProvider; '
+        + 'render the component through the plugin slot rather than in isolation',
+    )
+  }
+  return store
+}
+
+/**
+ * Read the scoped credential store, or fail with the reason it is missing.
+ *
+ * @returns The credential store for the nearest provider.
+ * @throws {Error} When called outside {@link CredentialStoreProvider}.
+ */
+function useCredentialStore(): CredentialStore {
+  const store = useContext(CredentialStoreContext)
+  if (store === undefined) {
+    throw new Error(
+      'useCredentialStore must be called inside a CredentialStoreProvider; '
         + 'render the component through the plugin slot rather than in isolation',
     )
   }
@@ -144,10 +200,13 @@ function useUsageStore(): UsageStore {
 }
 
 export {
+  CredentialStoreProvider,
   SettingsStoreProvider,
   UsageStoreProvider,
+  useCredentialStore,
   useSettingsStore,
   useUsageStore,
+  type CredentialStoreProviderProps,
   type SettingsStoreProviderProps,
   type UsageStoreProviderProps,
 }

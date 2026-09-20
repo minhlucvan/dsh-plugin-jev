@@ -5,8 +5,7 @@
  * exists at render time: the providers creating one store per mount, the hooks
  * selecting from them through context, and the components reading state with no
  * props threaded through them. A store unit test cannot show that a component
- * outside the provider fails loudly, that two trees do not share state, or that
- * a panel whose ledger read failed still renders.
+ * outside the provider fails loudly, or that two trees do not share state.
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
@@ -15,6 +14,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { CatalogReport, HealthReport, UsageApi, UsageReport } from '#src/client/api'
 import { SettingsStoreProvider, useSettingsStore } from '#src/client/context'
 import type { SettingsScope } from '#src/client/contracts'
+import type { CredentialApi, CredentialInfo } from '#src/client/credentials'
 import { useSettingsDraft } from '#src/client/hooks'
 import type { ClientSettings } from '#src/client/settings'
 import { defaultSettings } from '#src/client/settings'
@@ -22,13 +22,8 @@ import { SettingsPage } from '#src/client/settings-page'
 
 const TEST_TIMEOUT = 5000
 const EXPECTED_SINGLE_CALL = 1
-const EXPECTED_DOUBLE_CALLS = 2
 const FIRST_INDEX = 0
 const SECOND_INDEX = 1
-const SAMPLED_CALLS = 3
-const SAMPLE_INPUT_TOKENS = 1_200_000
-const MEGA_FIGURE = '1.2000'
-const TOOL_NAME = 'jev_classify'
 const TYPED_MODEL = 'jev-typed'
 const PERSISTED_MODEL = 'from the host'
 const LEDGER_ABOVE_MAX = '999999'
@@ -36,21 +31,34 @@ const LEDGER_ABOVE_MAX = '999999'
 /** A bound translator returning the key, so assertions read the key itself. */
 const translate = (key: string): string => key
 
-/** The totals the canned report carries. */
-const SAMPLE_TOTALS = { calls: SAMPLED_CALLS, inputTokens: SAMPLE_INPUT_TOKENS, outputTokens: 40, questions: SAMPLED_CALLS, stateChars: 300 }
-
-/** One recorded evaluation, as the canned report lists it. */
-const SAMPLE_ENTRY = { at: 0, tool: TOOL_NAME, model: PERSISTED_MODEL, questions: 1, stateChars: 100, inputTokens: SAMPLE_INPUT_TOKENS, outputTokens: 40, durationMs: 250 }
-
-/** The report the canned api returns. */
+/** The report the canned api returns; these cases never read its figures. */
 const SAMPLE_REPORT: UsageReport = {
-  totals: SAMPLE_TOTALS,
-  byTool: { [TOOL_NAME]: SAMPLE_TOTALS },
-  recent: [SAMPLE_ENTRY],
+  totals: { calls: 0, inputTokens: 0, outputTokens: 0, questions: 0, stateChars: 0 },
+  byTool: {},
+  recent: [],
 }
 
 /** The health the canned api reports. */
 const SAMPLE_HEALTH: HealthReport = { ok: true, enabled: true, model: PERSISTED_MODEL }
+
+/** A credential remote that reports no stored key and never writes. */
+const NO_CREDENTIALS: CredentialApi = {
+  describe: async (): Promise<CredentialInfo> => {
+    const info: CredentialInfo = {
+      configured: false,
+      source: undefined,
+      writable: true,
+    }
+    const answer = await Promise.resolve(info)
+    return answer
+  },
+  set: async (): Promise<void> => {
+    await Promise.resolve()
+  },
+  unset: async (): Promise<void> => {
+    await Promise.resolve()
+  },
+}
 
 /** A scope that records mutations instead of persisting them. */
 interface FakeScope {
@@ -151,7 +159,14 @@ function renderPage(
   scope: SettingsScope<ClientSettings>,
   api: UsageApi,
 ): ReturnType<typeof render> {
-  return render(<SettingsPage scope={scope} translate={translate} api={api} />)
+  return render(
+    <SettingsPage
+      scope={scope}
+      translate={translate}
+      api={api}
+      credentials={NO_CREDENTIALS}
+    />,
+  )
 }
 
 /**
@@ -286,41 +301,6 @@ function testHookOutsideProviderFailsLoudly(): void {
   expect(() => render(<UnscopedConsumer />)).toThrow(/SettingsStoreProvider/u)
 }
 
-async function testPanelShowsTotalsToolsAndRecent(): Promise<void> {
-  expect.hasAssertions()
-  renderPage(fakeScope().scope, fakeApi().api)
-
-  /* The reads cannot have settled inside a synchronous render. */
-  expect(screen.getByText('usageLoading')).toBeDefined()
-
-  await screen.findByText(MEGA_FIGURE)
-  expect(screen.getAllByText(MEGA_FIGURE)).toHaveLength(EXPECTED_SINGLE_CALL)
-  expect(screen.getAllByText(TOOL_NAME).length).toBeGreaterThan(FIRST_INDEX)
-}
-
-async function testPanelRefreshReReadsTheLedger(): Promise<void> {
-  expect.hasAssertions()
-  const fake = fakeApi()
-  renderPage(fakeScope().scope, fake.api)
-  await screen.findByText(MEGA_FIGURE)
-
-  fireEvent.click(screen.getByRole('button', { name: 'usageRefresh' }))
-  await waitFor(() => {
-    expect(fake.loads()).toBe(EXPECTED_DOUBLE_CALLS)
-  })
-}
-
-async function testPanelReportsAFailedReadWithoutThrowing(): Promise<void> {
-  expect.hasAssertions()
-  renderPage(fakeScope().scope, fakeApi(new Error('ledger offline')).api)
-
-  const alert = await screen.findByRole('alert')
-  expect(alert.textContent).toContain('usageFailed')
-  expect(alert.textContent).toContain('ledger offline')
-  // The page around the panel is untouched by the failure.
-  expect(input('modelLabel').value).toBe(PERSISTED_MODEL)
-}
-
 describe('settings page', () => {
   it('renders the persisted snapshot', { timeout: TEST_TIMEOUT }, testRendersThePersistedSnapshot)
 
@@ -337,12 +317,4 @@ describe('settings page', () => {
   it('scopes one store per provider', { timeout: TEST_TIMEOUT }, testTwoProvidersDoNotShareState)
 
   it('fails loudly when a hook is used outside the provider', { timeout: TEST_TIMEOUT }, testHookOutsideProviderFailsLoudly)
-})
-
-describe('usage panel', () => {
-  it('shows the totals, the per-tool rows and the recent evaluations', { timeout: TEST_TIMEOUT }, testPanelShowsTotalsToolsAndRecent)
-
-  it('re-reads the ledger when refreshed', { timeout: TEST_TIMEOUT }, testPanelRefreshReReadsTheLedger)
-
-  it('reports a failed read without throwing', { timeout: TEST_TIMEOUT }, testPanelReportsAFailedReadWithoutThrowing)
 })

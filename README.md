@@ -156,6 +156,20 @@ warning.
 Every field is validated at resolution, and `confidenceFloor` may not exceed
 `confirmFloor`.
 
+### Two channels
+
+The Cordis config above is the **deployment** channel: an operator sets it in the
+profile patch and it applies to everyone. The plugin also installs a per-user
+section with the host's settings provider, carrying the same fields with the same
+bounds, so the browser settings page is a real configuration path rather than a
+form with nowhere to write. The resolved value is schema defaults, then the
+profile, then whatever the user saved.
+
+The section is *installed*, not required: a profile without a settings provider
+falls back to the composition entry and behaves exactly as before. Renaming
+`apiKeyEnv` in the form rebuilds the credential resolver immediately, so the key
+field starts describing the new reference without a restart.
+
 ---
 
 ## The tools

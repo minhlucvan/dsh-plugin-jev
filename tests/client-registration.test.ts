@@ -83,7 +83,10 @@ interface Fakes {
 }
 
 /**
- * Provide the three host services the client injects.
+ * Provide the host services the client injects.
+ *
+ * The credential namespace answers successful remote responses so the entry's
+ * contract check passes; nothing here reads a value, and no case asserts on one.
  *
  * @param ctx - Cordis context to provide into.
  * @returns The recorders, for assertions.
@@ -131,6 +134,20 @@ function provideFakes(ctx: Context): Fakes {
   ctx.provide('locale', { bind, register: registerLocale })
   ctx.provide('slots', { inject: slotInject, register: slotRegister })
   ctx.provide('settingsScope', { bind: scopeBind })
+  ctx.provide('remote.credentials', {
+    describe: async (): Promise<unknown> => {
+      const answer = await Promise.resolve({ ok: true, value: {} })
+      return answer
+    },
+    set: async (): Promise<unknown> => {
+      const answer = await Promise.resolve({ ok: true, value: undefined })
+      return answer
+    },
+    unset: async (): Promise<unknown> => {
+      const answer = await Promise.resolve({ ok: true, value: undefined })
+      return answer
+    },
+  })
 
   return {
     registerLocale,
@@ -201,7 +218,7 @@ async function testSeatsThePageInTheSettingsSection(): Promise<void> {
   expect(descriptor.id).toBe(SLOT_ID)
   expect(descriptor.label?.()).toBe('nav')
   expect(Object.keys(injectedProps(fakes)).toSorted())
-    .toStrictEqual(['api', 'scope', 'translate'])
+    .toStrictEqual(['api', 'credentials', 'scope', 'translate'])
   await fiber.dispose()
 }
 
@@ -243,7 +260,8 @@ async function testClientNamespaceThroughLoader(): Promise<void> {
   const client = await import('#src/client/index')
   expect(['default' in client]).toStrictEqual([false])
   expect(client.name).toBe('jev-client')
-  expect(client.inject).toStrictEqual(['locale', 'settingsScope', 'slots'])
+  expect(client.inject)
+    .toStrictEqual(['locale', 'remote.credentials', 'settingsScope', 'slots'])
 }
 
 describe('client registration', () => {

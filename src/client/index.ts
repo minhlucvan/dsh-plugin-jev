@@ -3,9 +3,9 @@
  *
  * The entry names the plugin, declares the host services it needs, and seats
  * one component in one slot. It holds no rendering logic and no state: the page
- * receives the settings scope, the translator and the plugin's own routes as
- * props, and every registration is owned by this fiber so disposal is
- * observable.
+ * receives the settings scope, the translator, the plugin's own routes and the
+ * credential remote as props, and every registration is owned by this fiber so
+ * disposal is observable.
  *
  * @module dsh-plugin-jev/client
  */
@@ -19,6 +19,7 @@ import {
   isSettingsScopeBinder,
   isSlotsService,
 } from './contracts.ts'
+import { createCredentialApi, isCredentialNamespace } from './credentials.ts'
 import { LOCALE_NAMESPACE, locales } from './locale.ts'
 import { SettingsPage } from './settings-page.tsx'
 import type { ClientSettings } from './settings.ts'
@@ -27,8 +28,15 @@ import { normalizeSettings } from './settings.ts'
 /** Client plugin name; keep this stable after publishing. */
 const name = 'jev-client'
 
-/** Host services required before the client can seat anything. */
-const inject = ['locale', 'settingsScope', 'slots']
+/**
+ * Host services required before the client can seat anything.
+ *
+ * `remote.credentials` is the generated Remote namespace the API-key field
+ * reads and writes. It is named as its own service because that is how the
+ * Remote assembly installs it — one service per namespace, addressed as
+ * `remote.<namespace>`.
+ */
+const inject = ['locale', 'remote.credentials', 'settingsScope', 'slots']
 
 /** The slot this feature seats a component in. */
 const SLOT_NAME = 'settings.section'
@@ -101,6 +109,17 @@ function apply(ctx: Context): void {
     isSettingsScopeBinder,
     'settingsScope',
   )
+  /*
+   * The generated namespace is resolved through its narrow local contract, not
+   * imported: its declaration belongs to a host package this repository does
+   * not depend on. `ctx.get` is the accessor that works without that import —
+   * the same seam `src/routes.ts` uses for the web server.
+   */
+  const credentialNamespace = requireService(
+    ctx.get('remote.credentials'),
+    isCredentialNamespace,
+    'remote.credentials',
+  )
 
   ctx.effect(
     () => locale.register(LOCALE_NAMESPACE, locales),
@@ -115,6 +134,11 @@ function apply(ctx: Context): void {
    * state that would leak across a reload.
    */
   const api = createUsageApi()
+  /*
+   * The credential adapter is stateless too: it carries no value and holds no
+   * cache, so one instance per fiber is enough for every mount of the page.
+   */
+  const credentials = createCredentialApi(credentialNamespace)
 
   /*
    * The callback runs once the slot exists, which may be after this function has
@@ -130,7 +154,7 @@ function apply(ctx: Context): void {
             id: SLOT_ID,
             order: SLOT_ORDER,
             label: () => translate('nav'),
-            inject: () => ({ scope, translate, api }),
+            inject: () => ({ scope, translate, api, credentials }),
           },
           SettingsPage,
         ),
