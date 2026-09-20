@@ -1,0 +1,37 @@
+# Bundle patch applied over the selected DSH profile when this package is listed
+# in `dsh.profile.bundles`. The row id is deployment-local; the package name
+# must match package.json.
+#
+# `dsh-base` provides `tools`, `commands` and `skills`, so the four rows below
+# activate on any ordinary profile. Rows are inserted in order and the tool,
+# command and skill companions inject the `jev` service, so the core row must
+# stay first.
+
+- insert:
+    - id: dsh-plugin-jev
+      name: 'dsh-plugin-jev'
+      config:
+        # The credential is read from this variable; the secret itself is never
+        # part of the patch.
+        apiKeyEnv: TYPESAFE_API_KEY
+        model: jev-latest
+        confidenceFloor: 0.5
+        confirmFloor: 0.85
+
+    # The tool face is the product: these are the tools the agent calls.
+    - id: dsh-plugin-jev-tools
+      name: 'dsh-plugin-jev/tools'
+
+    # Teaches the agent when a Jev call is cheaper than reasoning it out.
+    - id: dsh-plugin-jev-skills
+      name: 'dsh-plugin-jev/skills'
+
+    # `/jev` reports the session's token accounting without sending a message.
+    - id: dsh-plugin-jev-commands
+      name: 'dsh-plugin-jev/commands'
+
+    # Opt-in rows, because a pending injection blocks startup and not every
+    # profile provides their services:
+    #   ./routes     needs `webServer` (present in dsh-web-app, not in headless)
+    #   ./invariant  needs `invariants`, which no ordinary profile provides
+    #   ./client     is loaded through the `dsh.client` manifest field, not a row

@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only: this workflow never writes to the repository.
+permissions:
+  contents: read
+
+# A newer push supersedes an in-flight run for the same branch or PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      # Report every broken Node version in one run instead of stopping at the
+      # first, so a failure names the version that regressed.
+      fail-fast: false
+      matrix:
+        # The package declares `^22.19.0 || >=24.0.0`; test both ends of that
+        # range rather than only the version CI happens to default to.
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm test
+      - run: pnpm run build
+      - name: Verify the packed archive covers the manifest
+        run: node scripts/check-package.mjs

@@ -1,0 +1,90 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "restriction": "error",
+    "style": "error"
+  },
+  "plugins": ["import", "typescript", "node", "unicorn", "vitest", "promise", "eslint", "oxc"],
+  "options": {
+    "reportUnusedDisableDirectives": "warn",
+    "typeAware": true
+  },
+  "env": { "builtin": true },
+  "ignorePatterns": [
+    "**/lib/**",
+    "**/node_modules/**",
+    "tests/fixtures/**",
+    "**/*.js",
+    "**/*.mjs",
+    "**/*.config.ts"
+  ],
+  "rules": {
+    "no-inline-comments": "off",
+    "typescript/prefer-readonly-parameter-types": "off",
+    "oxc/no-optional-chaining": "off",
+    "oxc/no-rest-spread-properties": "off",
+    "oxc/no-async-await": "off",
+    "vitest/no-importing-vitest-globals": "off",
+    "eslint/no-undefined": "off",
+    "import/no-nodejs-modules": "off",
+    "node/no-sync": "off",
+    "sort-imports": ["error", { "ignoreDeclarationSort": true }],
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
+    "import/prefer-default-export": "off",
+    "import/no-named-export": "off",
+    "func-style": "off",
+    "sort-keys": "off",
+    "unicorn/prefer-ternary": "off",
+    "vitest/no-hooks": "off",
+    "no-void": ["error", { "allowAsStatement": true }],
+    "promise/prefer-await-to-callbacks": "off",
+
+    "eslint/max-lines": ["error", { "max": 350 }],
+    "eslint/max-lines-per-function": ["error", { "IIFEs": true, "max": 120 }],
+    "eslint/max-statements": ["error", 60],
+
+    // The credential contract is environment-variable indirection: a profile
+    // names a variable and the plugin reads it, which is how a secret stays out
+    // of committed configuration. Reading process.env is the documented
+    // interface here, not a shortcut around a host service.
+    "node/no-process-env": "off",
+
+    // The TypeSafe wire contract gives JSON null a meaning of its own: a Choice
+    // option mapped to null says "the label is the whole rubric". Substituting
+    // another value would change the request the model receives.
+    "unicorn/no-null": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/jev/contracts.ts", "src/jev/ledger.ts"],
+      "rules": {
+        // The endpoint and ledger payload shapes are type aliases rather than interfaces
+        // on purpose: TypeScript grants an implicit index signature to an object
+        // type but not to an interface, and without one no decoded response is
+        // assignable to this package's JSON type. An interface would make every
+        // response unusable without a cast.
+        "typescript/consistent-type-definitions": "off"
+      }
+    },
+    {
+      "files": ["tests/**/*.ts", "tests/**/*.tsx"],
+      "rules": {
+        "vitest/prefer-to-be-falsy": "off",
+        "vitest/prefer-to-be-truthy": "off"
+      }
+    },
+    {
+      "files": ["tests/setup-dom.ts"],
+      "rules": {
+        // Vitest setup, not a suite: it registers the per-test cleanup hook that
+        // keeps one rendered tree from leaking into the next test.
+        "vitest/require-top-level-describe": "off"
+      }
+    }
+  ]
+}
+

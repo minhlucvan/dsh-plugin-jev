@@ -1,0 +1,57 @@
+name: release
+
+# Every push to main builds the package and publishes the packed tarball to
+# a GitHub Release tagged v<version> (the version from package.json). The
+# artifact ships version-free as pkg.tgz and is ready to install without a
+# lifecycle build. Bump the version to cut a new release; re-pushing the same
+# version refreshes that release's artifact.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Publish from one push at a time; a superseded run must not upload a stale
+# tarball over a newer release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # `gh release create --generate-notes` needs the commit history to
+          # build notes; the default shallow clone would produce empty ones.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm test
+      - run: pnpm run build
+      - name: Verify the packed archive covers the manifest
+        run: node scripts/check-package.mjs
+      - name: Pack the artifact
+        run: |
+          pnpm pack --pack-destination dist
+          mv dist/*.tgz dist/pkg.tgz
+      - name: Publish to the version release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/*.tgz --clobber
+          else
+            gh release create "$tag" dist/*.tgz --title "$tag" --generate-notes
+          fi
