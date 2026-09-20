@@ -1,17 +1,25 @@
-feat(benchmark): add the small-state scenario and the break-even rule
+feat(credentials): resolve the API key through the host credential seam
 
-The corpus only had scenarios with a large state, so restating the evidence
-always cost more than the deliberation it removed and the report could not say
-where the crossover is. A fifth scenario routes a one-line request through the
-shipped request bank, which is the shape the plugin is actually for.
+The plugin only understood an environment-variable name, so the key could not be
+entered anywhere the user could reach — which is not how any other keyed plugin
+in this harness works. It now resolves the credential per evaluation through
+ctx.credentials when that service is mounted, and falls back to the process
+environment when it is not.
 
-Measured against the live API, that scenario still loses on raw tokens (-35.3%
-in the bank shape) because TypeSafe bills a rubric far above what four
-characters per token predicts. What the data does support is now stated
-exactly: the bank shape breaks even at an output weight of 2.7, above which Jev
-is cheaper, and the ad-hoc shape never breaks even at any weight because the
-agent generates the questions itself.
+Resolution is deliberately per call rather than cached at activation: the
+credential seam is writable while the host runs, so a key saved from the
+settings page has to reach the very next tool call without a restart.
 
-The modelled run now also reports the estimator's error against measurement:
-four characters per token under-counts Jev's billed input by about 1.6x on this
-corpus.
+That also changes when the plugin is allowed to fail. With a credential seam
+mounted the settings page is a real configuration path, so activation succeeds
+and an unset key fails the call that needs it, naming the reference. Without the
+seam the environment is the only source and activation stays the earliest point
+it can be judged, so a missing key still fails there.
+
+The narrow local contract is safe because the seam brands references with a
+compile-time-only brand (brandString returns its argument unchanged); the
+reference grammar is restated locally so a malformed apiKeyEnv reads as unset
+rather than throwing inside the provider.
+
+Also: validation moves to src/jev/validation.ts, and the browser manifest
+declares the remotes carrier the settings page needs.

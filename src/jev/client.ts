@@ -51,6 +51,13 @@ interface JevEvaluateInput {
 interface JevEvaluateOptions {
   /** Caller cancellation, fused with the configured deadline. */
   signal?: AbortSignal
+  /**
+   * Credential for this call, when the caller resolves one per operation.
+   *
+   * A credential seam can be written while the host runs, so the client must
+   * accept a fresher key than the one it was constructed with.
+   */
+  apiKey?: string
 }
 
 /** Transport for one configured endpoint. */
@@ -116,6 +123,8 @@ interface AttemptRequest {
   input: JevEvaluateInput
   /** Cancellation supplied by the caller, if any. */
   callerSignal: AbortSignal | undefined
+  /** Credential for this call, when the caller resolved one. */
+  apiKey: string | undefined
 }
 
 /** Everything one HTTP POST needs. */
@@ -228,7 +237,7 @@ async function sendOnce(
     const response = await postJson({
       fetchImpl: context.fetchImpl,
       url: context.url,
-      apiKey: context.apiKey,
+      apiKey: request.apiKey ?? context.apiKey,
       body: JSON.stringify({
         state: request.input.state,
         model: request.input.model ?? context.model,
@@ -303,7 +312,7 @@ function createJevClient(options: JevClientOptions): JevClient {
     async evaluate(input, callOptions = {}): Promise<JevEvaluation> {
       const evaluation = await attemptWithRetries(
         context,
-        { input, callerSignal: callOptions.signal },
+        { input, callerSignal: callOptions.signal, apiKey: callOptions.apiKey },
         FIRST_ATTEMPT,
       )
       return evaluation
