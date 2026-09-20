@@ -96,7 +96,7 @@ function testResolvesDefaults(): void {
   expect(config.apiKeyEnv).toBe(DEFAULT_API_KEY_ENV)
   expect(config.baseUrl).toBe('https://api.typesafe.ai')
   expect(config.model).toBe('jev-latest')
-  expect(config.tools.classify).toBe(true)
+  expect(config.tools.ask).toBe(true)
 }
 
 function testStripsTrailingSlash(): void {

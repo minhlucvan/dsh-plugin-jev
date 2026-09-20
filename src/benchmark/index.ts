@@ -115,14 +115,18 @@ function buildRows(
  * Where the corpus and its reference reasoning live, for a reader who wants to
  * audit the modelled half of the comparison.
  *
+ * The list is derived from the corpus rather than written out, so adding an
+ * item cannot leave this pointing at a file the package no longer ships: an
+ * item's id names its module, as in `comparing` and `items-comparing.ts`.
+ *
  * @returns Project-root-relative source paths.
  */
 function benchmarkSource(): string[] {
-  return [
-    'src/benchmark/corpus.ts',
-    'src/benchmark/items-routing.ts',
-    'src/benchmark/items-judgement.ts',
-  ]
+  const sources = new Set<string>(['src/benchmark/corpus.ts'])
+  for (const item of CORPUS) {
+    sources.add(`src/benchmark/items-${item.id}.ts`)
+  }
+  return [...sources].toSorted()
 }
 
 /**

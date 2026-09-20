@@ -23,7 +23,7 @@ const FIRST_INDEX = 0
 const SAMPLED_CALLS = 3
 const SAMPLE_INPUT_TOKENS = 1_200_000
 const MEGA_FIGURE = '1.2000'
-const TOOL_NAME = 'jev_classify'
+const TOOL_NAME = 'jev_ask'
 const PERSISTED_MODEL = 'from the host'
 
 /** A bound translator returning the key, so assertions read the key itself. */

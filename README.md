@@ -5,7 +5,7 @@ Harness plugin.
 
 Jev is not a chat model. It evaluates typed **questions** against a **state** and
 returns typed answers with probabilities and confidence — no generated prose to
-parse. This package puts that behind seven agent tools, system-prompt guidance
+parse. This package puts that behind three agent tools, system-prompt guidance
 that tells the model to prefer them, a skill carrying the detail, an operator
 command, three HTTP endpoints, and a browser settings page with an API-key
 field.
@@ -225,15 +225,17 @@ Four surfaces over one ledger, so they cannot disagree:
 
 ## Tools
 
-| Tool | Primitive | Returns |
+| Tool | Question types | Returns |
 | --- | --- | --- |
-| `jev_classify` | Choice | `choice`, `confidence`, `route`, `probabilities` |
-| `jev_score` | Score | `score`, nearest `level`, `confidence`, `route` |
-| `jev_check` | Noul | `noul` (0–1), boolean `verdict`, `route` |
-| `jev_ask` | mixed | every answer in one request, plus a per-answer route |
-| `jev_reason` | mixed | a built-in bank's answers, a one-line-per-decision summary, and the strictest route |
-| `jev_compare` | Score fan-out | a ranking of the candidates, each with a weighted `composite`, and the `winner` |
+| `jev_ask` | `choice`, `score`, `noul` | every answer in one request, plus a per-answer route |
+| `jev_reason` | a shipped bank | the bank's answers, a one-line-per-decision summary, and the strictest route |
 | `jev_usage` | — | session token accounting by tool |
+
+`jev_ask` is the general tool: it takes a map of answer id to typed question,
+so a `choice` (an option map), a `score` (ordered levels, lowest first) and a
+`noul` (a yes/no with optional `true`/`false` criteria) all go in one call.
+Reach for a shipped bank through `jev_reason` when one covers the decision, and
+express the rest yourself with `jev_ask`.
 
 Every tool returns the tokens the call cost, so the model can see the price of
 repeating a judgement.
@@ -331,7 +333,7 @@ without unmounting anything else.
 
 | Export | Contributes |
 | --- | --- |
-| `./tools` | the seven tools above |
+| `./tools` | the three tools above |
 | `./prompt` | a system-prompt section telling the agent to **delegate a decision instead of reasoning it out**, and which shapes to delegate. This is the adoption lever — see below |
 | `./skills` | `jev-narrow-judgements` — when a Jev call beats reasoning, how to keep the state small, how to read a route. The body is rendered from the live thresholds |
 | `./commands` | `/jev` — `usage` and `reset`, read from the ledger without touching the model |

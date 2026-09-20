@@ -20,18 +20,10 @@ import type { JevRoutingPolicy } from './routing.ts'
 
 /** Per-tool switches the service reports to its faces. */
 interface JevToolSwitches {
-  /** Publish jev_classify. */
-  classify: boolean
-  /** Publish jev_score. */
-  score: boolean
-  /** Publish jev_check. */
-  check: boolean
   /** Publish jev_ask. */
   ask: boolean
   /** Publish jev_reason. */
   reason: boolean
-  /** Publish jev_compare. */
-  compare: boolean
   /** Publish jev_usage. */
   usage: boolean
 }

@@ -7,13 +7,17 @@
  * and that the ad-hoc shape is not — which is the distinction the whole report
  * exists to make.
  */
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, it } from 'vitest'
 
 import { DEFAULT_ASSUMPTIONS, baselineCost, jevBankCost, jevMeasuredCost, jevModelledCost } from '#src/benchmark/cost'
 import { CORPUS, countDecisions, getItem } from '#src/benchmark/corpus'
 import type { BenchmarkItem } from '#src/benchmark/corpus'
 import { estimateTokens } from '#src/benchmark/estimator'
-import { runModelledBenchmark } from '#src/benchmark'
+import { benchmarkSource, runModelledBenchmark } from '#src/benchmark'
 import { renderReport } from '#src/benchmark/render'
 
 const TEST_TIMEOUT = 5000
@@ -29,6 +33,10 @@ const MEASURED_INPUT_TOKENS = 9001
 const MEASURED_LATENCY_SECONDS = 0.25
 const PRICE_MULTIPLIER = 10
 const FLOAT_DIGITS = 5
+const CORPUS_SOURCE = 'src/benchmark/corpus.ts'
+
+/** Repository root, resolved from this suite's own location. */
+const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
 /** The item the bank-shape assertions read. */
 const BANK_ITEM = CORPUS.find(item => item.bank !== undefined)
@@ -165,6 +173,14 @@ function testReportLeadsWithCostAndTime(): void {
   expect(markdown).toContain('Mode: **modelled**')
 }
 
+function testSourcesNameShippedFiles(): void {
+  expect.hasAssertions()
+  const sources = benchmarkSource()
+  // These paths are published in the report, so a stale one is a visible defect.
+  expect(sources).toContain(CORPUS_SOURCE)
+  expect(sources.filter(source => !existsSync(path.join(REPO_ROOT, source)))).toStrictEqual([])
+}
+
 function testReportPricesBothCallShapes(): void {
   expect.hasAssertions()
   const report = runModelledBenchmark()
@@ -195,6 +211,8 @@ describe('benchmark', () => {
   it('uses reported figures for the measured bank arm', { timeout: TEST_TIMEOUT }, testMeasuredBankArmUsesTheReportedFigures)
 
   it('leads the report with cost and time', { timeout: TEST_TIMEOUT }, testReportLeadsWithCostAndTime)
+
+  it('names only shipped corpus sources', { timeout: TEST_TIMEOUT }, testSourcesNameShippedFiles)
 
   it('prices both call shapes over the corpus', { timeout: TEST_TIMEOUT }, testReportPricesBothCallShapes)
 })

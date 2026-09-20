@@ -10,15 +10,7 @@
  * @module dsh-plugin-jev/jev/tools/shared
  */
 
-import type {
-  JevAnswer,
-  JevChoiceAnswer,
-  JevEvaluation,
-  JevJson,
-  JevNoulAnswer,
-  JevQuestion,
-  JevScoreAnswer,
-} from './contracts.ts'
+import type { JevAnswer, JevJson, JevQuestion } from './contracts.ts'
 import { isRecord } from './contracts.ts'
 import { effectiveConfidence, routeFromConfidence } from './routing.ts'
 import type { JevRisk, JevRoute } from './routing.ts'
@@ -34,9 +26,6 @@ interface JevTextBlock {
 
 /** Characters of a one-line summary kept before it is elided. */
 const LINE_LIMIT = 140
-
-/** Characters of a card title kept before it is elided. */
-const TITLE_LIMIT = 72
 
 /** Nesting depth accepted from model-supplied JSON before it is refused. */
 const JSON_DEPTH_LIMIT = 32
@@ -102,24 +91,6 @@ function riskOf(value: unknown): JevRisk {
     return 'high'
   }
   return DEFAULT_RISK
-}
-
-/**
- * Turn a list of options into a Choice criteria map.
- *
- * Every option maps to `null` because the option label usually is the whole
- * rubric; only an option whose meaning is genuinely ambiguous needs a
- * description, and inventing one here would put words in the caller's mouth.
- *
- * @param options - Option labels.
- * @returns Jev's option-to-description map.
- */
-function choiceCriteria(options: string[]): Record<string, JevJson> {
-  const criteria: Record<string, JevJson> = {}
-  for (const option of options) {
-    criteria[option] = null
-  }
-  return criteria
 }
 
 /**
@@ -272,73 +243,14 @@ function parseQuestionMap(value: unknown): Record<string, JevQuestion> {
   return questions
 }
 
-/**
- * Read the Choice answer filed under one id.
- *
- * The response is validated at the transport boundary, but the *shape* of an
- * answer still depends on the question that was asked. Narrowing here turns a
- * mismatch into a named failure instead of an undefined field in a routing
- * decision.
- *
- * @param evaluation - The response to read.
- * @param id - Answer id the question was filed under.
- * @returns The Choice answer.
- * @throws {Error} When the response carries no Choice answer under that id.
- */
-function requireChoiceAnswer(evaluation: JevEvaluation, id: string): JevChoiceAnswer {
-  const answer = evaluation.answers[id]
-  if (answer === undefined || answer.type !== 'choice') {
-    throw new Error(`Jev returned no choice answer for "${id}"`)
-  }
-  return answer
-}
-
-/**
- * Read the Score answer filed under one id.
- *
- * @param evaluation - The response to read.
- * @param id - Answer id the question was filed under.
- * @returns The Score answer.
- * @throws {Error} When the response carries no Score answer under that id.
- */
-function requireScoreAnswer(evaluation: JevEvaluation, id: string): JevScoreAnswer {
-  const answer = evaluation.answers[id]
-  if (answer === undefined || answer.type !== 'score') {
-    throw new Error(`Jev returned no score answer for "${id}"`)
-  }
-  return answer
-}
-
-/**
- * Read the Noul answer filed under one id.
- *
- * @param evaluation - The response to read.
- * @param id - Answer id the question was filed under.
- * @returns The Noul answer.
- * @throws {Error} When the response carries no Noul answer under that id.
- */
-function requireNoulAnswer(evaluation: JevEvaluation, id: string): JevNoulAnswer {
-  const answer = evaluation.answers[id]
-  if (answer === undefined || answer.type !== 'noul') {
-    throw new Error(`Jev returned no noul answer for "${id}"`)
-  }
-  return answer
-}
-
 export {
   DEFAULT_RISK,
   LINE_LIMIT,
-  TITLE_LIMIT,
-  choiceCriteria,
   isJevJson,
   oneLine,
   parseQuestionMap,
-  requireChoiceAnswer,
-  requireNoulAnswer,
-  requireScoreAnswer,
   riskOf,
   routeForAnswer,
   textBlock,
   type JevTextBlock,
 }
-

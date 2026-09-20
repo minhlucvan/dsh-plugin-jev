@@ -24,7 +24,7 @@ import { createTestService } from './harness.ts'
 const TEST_TIMEOUT = 5000
 const EXPECTED_SINGLE_CALL = 1
 const FIRST_INDEX = 0
-const TOOL_COUNT = 7
+const TOOL_COUNT = 3
 const ROUTE_PATH = '/api/dsh-plugin-jev'
 const HEALTH_PATH = '/api/dsh-plugin-jev/health'
 const CATALOG_PATH = '/api/dsh-plugin-jev/catalog'
@@ -150,7 +150,7 @@ async function testRegistersTools(): Promise<void> {
 
   const fiber = await ctx.plugin({ apply: applyTools, name: 'jev-tools', inject: ['tools', 'jev'] })
   expect(registry.register).toHaveBeenCalledTimes(TOOL_COUNT)
-  expect(nameOf(registry.record[FIRST_INDEX], 'tool')).toBe('jev_classify')
+  expect(nameOf(registry.record[FIRST_INDEX], 'tool')).toBe('jev_ask')
 
   await fiber.dispose()
   expect(registry.unregister).toHaveBeenCalledTimes(TOOL_COUNT)
@@ -167,12 +167,8 @@ async function testRegistersOnlyEnabledTools(): Promise<void> {
   const narrowed: JevService = {
     ...service,
     tools: {
-      classify: true,
-      score: false,
-      check: false,
-      ask: false,
+      ask: true,
       reason: false,
-      compare: false,
       usage: false,
     },
   }
@@ -180,7 +176,7 @@ async function testRegistersOnlyEnabledTools(): Promise<void> {
 
   await ctx.plugin({ apply: applyTools, name: 'jev-tools', inject: ['tools', 'jev'] })
   expect(registry.register).toHaveBeenCalledTimes(EXPECTED_SINGLE_CALL)
-  expect(nameOf(registry.record[FIRST_INDEX], 'tool')).toBe('jev_classify')
+  expect(nameOf(registry.record[FIRST_INDEX], 'tool')).toBe('jev_ask')
   removeJev()
   removeHost()
 }
@@ -225,7 +221,7 @@ async function testRegistersSkill(): Promise<void> {
 function testSkillBodyNamesItsTools(): void {
   expect.hasAssertions()
   const content = buildSkillContent(testService())
-  expect(content).toContain('jev_classify')
+  expect(content).toContain('jev_ask')
   expect(content).toContain('jev_reason')
   expect(content).toContain('route')
 }

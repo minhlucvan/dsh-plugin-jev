@@ -1,10 +1,13 @@
 /**
  * Comparing: the decision an agent makes when several suspects fit a symptom.
  *
- * This item is TypeSafe's composite-scoring pattern in the corpus: three
- * candidates scored on three independent dimensions, nine Score questions in
- * one request, ranked in code afterwards. No shipped bank covers it, so the
- * report prices it on the ad-hoc arm alone.
+ * This item is TypeSafe's composite-scoring pattern in the corpus, expressed
+ * through `jev_ask`: three candidates scored on three independent dimensions,
+ * nine Score questions written into one `jev_ask` call, ranked in code
+ * afterwards. It is the evidence for not shipping a dedicated fan-out tool —
+ * the calling model has to write every candidate and every question into its
+ * own call, which is exactly what the report prices on the ad-hoc arm. No
+ * shipped bank covers it, so the bank shape cannot answer it either.
  *
  * @module dsh-plugin-jev/benchmark/items-comparing
  */

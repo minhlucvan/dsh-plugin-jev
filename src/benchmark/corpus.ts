@@ -8,8 +8,9 @@
  * baseline cost is computed from.
  *
  * Three are covered by a shipped bank, so the report can price both Jev call
- * shapes on the same work. The fourth is a nine-question fan-out no bank
- * covers, so only the ad-hoc shape answers it.
+ * shapes on the same work. The fourth is a nine-question composite fan-out,
+ * expressed through `jev_ask`, that no bank covers, so only the ad-hoc shape
+ * answers it.
  *
  * @module dsh-plugin-jev/benchmark/corpus
  */

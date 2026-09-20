@@ -41,18 +41,10 @@ import {
 
 /** Per-tool switches, so a profile can publish only part of the tool face. */
 interface ToolSwitches {
-  /** Publish `jev_classify` (Choice). */
-  classify?: boolean
-  /** Publish `jev_score` (Score). */
-  score?: boolean
-  /** Publish `jev_check` (Noul). */
-  check?: boolean
-  /** Publish `jev_ask` (mixed questions in one request). */
+  /** Publish `jev_ask` (any typed question in one request). */
   ask?: boolean
   /** Publish `jev_reason` (the built-in reasoning banks). */
   reason?: boolean
-  /** Publish `jev_compare` (rank candidates on several dimensions). */
-  compare?: boolean
   /** Publish `jev_usage` (session token accounting). */
   usage?: boolean
 }
@@ -89,18 +81,10 @@ interface Config {
 
 /** Per-tool switches after defaults have been resolved. */
 interface ResolvedToolSwitches {
-  /** Publish `jev_classify`. */
-  classify: boolean
-  /** Publish `jev_score`. */
-  score: boolean
-  /** Publish `jev_check`. */
-  check: boolean
   /** Publish `jev_ask`. */
   ask: boolean
   /** Publish `jev_reason`. */
   reason: boolean
-  /** Publish `jev_compare`. */
-  compare: boolean
   /** Publish `jev_usage`. */
   usage: boolean
 }
@@ -158,12 +142,8 @@ const Config: schema<Config> = schema.object({
   adoptionPrompt: schema.boolean().default(DEFAULT_ADOPTION_PROMPT),
   banks: schema.array(schema.string()).default([...DEFAULT_BANKS]),
   tools: schema.object({
-    classify: schema.boolean().default(true),
-    score: schema.boolean().default(true),
-    check: schema.boolean().default(true),
     ask: schema.boolean().default(true),
     reason: schema.boolean().default(true),
-    compare: schema.boolean().default(true),
     usage: schema.boolean().default(true),
   }),
 })
@@ -295,12 +275,8 @@ function resolveConfig(config: Config = {}): ResolvedConfig {
     adoptionPrompt: or(config.adoptionPrompt, DEFAULT_ADOPTION_PROMPT),
     banks: [...or(config.banks, DEFAULT_BANKS)],
     tools: {
-      classify: or(tools.classify, true),
-      score: or(tools.score, true),
-      check: or(tools.check, true),
       ask: or(tools.ask, true),
       reason: or(tools.reason, true),
-      compare: or(tools.compare, true),
       usage: or(tools.usage, true),
     },
   }

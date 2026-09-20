@@ -169,9 +169,9 @@ function renderNotes(report: BenchmarkReport): string[] {
     + 'value in live mode). Generating a deliberation is what takes the time.',
     '- **Tokens** is the raw count, kept because it is the figure most often quoted.',
     '',
-    'The baseline completion is **modelled** from the reference reasoning shipped in',
-    '`src/benchmark/items-routing.ts` and `src/benchmark/items-judgement.ts`. Read it,',
-    'disagree with it, replace it with --trace <file>, and re-run.',
+    'The baseline completion is **modelled** from the reference reasoning shipped',
+    'beside the corpus in `src/benchmark/items-*.ts`. Read it, disagree with it,',
+    'replace it with --trace <file>, and re-run.',
     '',
   ]
 }

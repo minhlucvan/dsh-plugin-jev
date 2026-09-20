@@ -1,5 +1,5 @@
 /**
- * The composite tools: `jev_ask` and `jev_reason`.
+ * The general tools: `jev_ask` and `jev_reason`.
  *
  * These are where the token argument actually lands. `jev_ask` sends many
  * questions about one state in a single request, and `jev_reason` sends a whole
@@ -58,11 +58,18 @@ function createAskTool(service: JevService): ToolDefinition {
   return defineTool({
     name: 'jev_ask',
     description:
-      'Ask TypeSafe Jev several typed questions about one state in a single request. Use it '
-      + 'when you need more than one judgement from the same evidence: every question is '
-      + 'evaluated in parallel against the same state, so adding questions barely changes '
-      + 'cost or latency. Prefer this over calling a primitive tool repeatedly. Each answer '
-      + 'carries its own route; the strictest one is reported separately.',
+      'Ask TypeSafe Jev one or more typed questions about one state in a single request, '
+      + 'instead of reasoning the answers out yourself. Use it for any narrow judgement you '
+      + 'can phrase: which option applies, where something sits on a scale, or whether a '
+      + 'statement holds. Send every question you need about that state in this one call — '
+      + 'the questions are evaluated in parallel and the state is billed once, so five '
+      + 'questions cost barely more than one. Each entry of "questions" is an object with '
+      + '"type", "instructions" and "criteria". Type "choice" takes an option map, for '
+      + 'example { "billing": "the charge is wrong", "access": "the user cannot sign in" }; '
+      + 'type "score" takes ordered levels, lowest first, for example ["none", "partial", '
+      + '"total"]; type "noul" is a yes/no statement whose optional criteria { "true": ..., '
+      + '"false": ... } pin the boundary cases. Every answer comes back as one short line '
+      + 'with its own route, and the strictest route is reported separately.',
     parameters: {
       state: {
         type: 'json',

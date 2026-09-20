@@ -93,7 +93,7 @@ function testPlacesItselfAmongTheToolSections(): void {
 function testGuidanceSaysWhatTheModelNeeds(): void {
   expect.hasAssertions()
   const text = buildGuidance(createTestService({}))
-  expect(text).toContain('jev_classify')
+  expect(text).toContain('jev_ask')
   expect(text).toContain('jev_reason')
   expect(text).toContain('parallel')
   expect(text).toContain('route')
