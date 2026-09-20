@@ -7,7 +7,7 @@
  * credential remote as props, and every registration is owned by this fiber so
  * disposal is observable.
  *
- * @module dsh-plugin-jev/client
+ * @module dsh-plugin-system-one/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -41,13 +41,13 @@ const inject = ['locale', 'remote.credentials', 'settingsScope', 'slots']
 const SLOT_NAME = 'settings.section'
 
 /** This feature's seat within that slot. */
-const SLOT_ID = 'dsh-plugin-jev'
+const SLOT_ID = 'dsh-plugin-system-one'
 
 /** Seat order among the slot's other seats. */
 const SLOT_ORDER = 20
 
 /** Settings namespace this feature owns. */
-const SETTINGS_NAMESPACE = 'dsh-plugin-jev'
+const SETTINGS_NAMESPACE = 'dsh-plugin-system-one'
 
 /**
  * Resolve a host service through its narrow local contract.

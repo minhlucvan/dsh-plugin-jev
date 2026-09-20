@@ -1,12 +1,12 @@
 /**
- * Optional tool-registration companion for `dsh-plugin-jev`.
+ * Optional tool-registration companion for `dsh-plugin-system-one`.
  *
  * The tools are the point of the package: they let the calling model hand a
  * narrow judgement to Jev and receive a typed answer instead of producing one
  * itself. Registration goes through `ctx.effect`, so every tool disappears with
  * the fiber.
  *
- * @module dsh-plugin-jev/tools
+ * @module dsh-plugin-system-one/tools
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -93,7 +93,7 @@ function getJevService(ctx: Context): JevService {
   const service: unknown = ctx.get('jev')
   if (!isJevService(service)) {
     throw new Error(
-      'tools companion requires the "jev" service; mount the dsh-plugin-jev row first',
+      'tools companion requires the "jev" service; mount the dsh-plugin-system-one row first',
     )
   }
   return service
@@ -111,12 +111,12 @@ function apply(ctx: Context): void {
 
   if (!service.enabled) {
     ctx.logger.warn(
-      'dsh-plugin-jev tools are mounted but the plugin is disabled; no tool was registered',
+      'dsh-plugin-system-one tools are mounted but the plugin is disabled; no tool was registered',
     )
     return
   }
   if (definitions.length === NO_DEFINITIONS) {
-    ctx.logger.warn('dsh-plugin-jev registered no tools: every tool switch is off')
+    ctx.logger.warn('dsh-plugin-system-one registered no tools: every tool switch is off')
     return
   }
 

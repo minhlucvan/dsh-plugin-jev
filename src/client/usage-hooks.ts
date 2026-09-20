@@ -6,7 +6,7 @@
  * the package's own routes, and a failed read there must never touch the form's
  * draft.
  *
- * @module dsh-plugin-jev/client/usage-hooks
+ * @module dsh-plugin-system-one/client/usage-hooks
  */
 
 import { useStore } from 'zustand'

@@ -121,7 +121,7 @@ async function testProvidesServiceAndReleasesIt(): Promise<void> {
   const harness = await createPluginHarness()
   expect(harness.ctx.get(SERVICE_NAME)).toBeDefined()
   expect(harness.info).toHaveBeenCalledWith(
-    expect.stringContaining('dsh-plugin-jev ready'),
+    expect.stringContaining('dsh-plugin-system-one ready'),
   )
   await harness.dispose()
   expect(harness.ctx.get(SERVICE_NAME)).toBeUndefined()
@@ -156,7 +156,7 @@ async function testLoadsDisabledWithoutCredential(): Promise<void> {
   })
 }
 
-describe('dsh-plugin-jev', () => {
+describe('dsh-plugin-system-one', () => {
 
   it('preserves the function-plugin namespace through Loader unwrapping', { timeout: TEST_TIMEOUT }, testPreservesPluginNamespace)
 

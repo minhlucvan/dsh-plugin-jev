@@ -11,7 +11,7 @@
  * at everything is reasoning it out, so the two published shapes are the
  * endpoints of this one.
  *
- * @module dsh-plugin-jev/benchmark/breakeven
+ * @module dsh-plugin-system-one/benchmark/breakeven
  */
 
 import { gatedCost, reasonCost } from './approaches.ts'

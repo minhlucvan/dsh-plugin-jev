@@ -5,7 +5,7 @@
  * implementation, and the credential is an environment-variable *name*: the
  * secret itself never enters committed configuration.
  *
- * @module dsh-plugin-jev/config
+ * @module dsh-plugin-system-one/config
  */
 
 import schema from '@deepseek-ai/schemastery'
@@ -172,7 +172,7 @@ function trimTrailingSlash(baseUrl: string): string {
 function assertRange(label: string, value: number, bounds: NumericBounds): void {
   if (!Number.isFinite(value) || value < bounds.min || value > bounds.max) {
     throw new Error(
-      `dsh-plugin-jev: "${label}" must be between ${bounds.min} and ${bounds.max}, received ${value}`,
+      `dsh-plugin-system-one: "${label}" must be between ${bounds.min} and ${bounds.max}, received ${value}`,
     )
   }
 }
@@ -213,22 +213,22 @@ function assertConfig(config: ResolvedConfig): void {
 
   if (config.confidenceFloor > config.confirmFloor) {
     throw new Error(
-      'dsh-plugin-jev: "confidenceFloor" must not exceed "confirmFloor"',
+      'dsh-plugin-system-one: "confidenceFloor" must not exceed "confirmFloor"',
     )
   }
   if (config.apiKeyEnv.trim() === '') {
-    throw new Error('dsh-plugin-jev: "apiKeyEnv" must name an environment variable')
+    throw new Error('dsh-plugin-system-one: "apiKeyEnv" must name an environment variable')
   }
   if (config.model.trim() === '') {
-    throw new Error('dsh-plugin-jev: "model" must not be empty')
+    throw new Error('dsh-plugin-system-one: "model" must not be empty')
   }
   if (!HTTP_URL_PATTERN.test(config.baseUrl)) {
-    throw new Error('dsh-plugin-jev: "baseUrl" must be an http(s) URL')
+    throw new Error('dsh-plugin-system-one: "baseUrl" must be an http(s) URL')
   }
   for (const bank of config.banks) {
     if (!BANK_IDS.includes(bank)) {
       throw new Error(
-        `dsh-plugin-jev: "${bank}" is not a question bank this build ships; `
+        `dsh-plugin-system-one: "${bank}" is not a question bank this build ships; `
         + `choose from ${BANK_IDS.join(', ')}`,
       )
     }

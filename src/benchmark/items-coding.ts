@@ -6,7 +6,7 @@
  * constant buried in a script. Replace it with a captured trace and re-run to
  * check the claim.
  *
- * @module dsh-plugin-jev/benchmark/items-coding
+ * @module dsh-plugin-system-one/benchmark/items-coding
  */
 
 import { CHANGE_BANK } from '#src/jev/catalog/change'

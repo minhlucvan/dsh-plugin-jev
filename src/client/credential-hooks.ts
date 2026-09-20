@@ -6,7 +6,7 @@
  * settings store must never see, so its state and its transitions are kept in
  * one place a settings field cannot reach by accident.
  *
- * @module dsh-plugin-jev/client/credential-hooks
+ * @module dsh-plugin-system-one/client/credential-hooks
  */
 
 import { useEffect } from 'react'

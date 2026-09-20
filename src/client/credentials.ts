@@ -12,7 +12,7 @@
  * depend on — the same reason `src/routes.ts` describes the web server it
  * reaches without importing the host's own types.
  *
- * @module dsh-plugin-jev/client/credentials
+ * @module dsh-plugin-system-one/client/credentials
  */
 
 import type { DraftSettings } from './settings.ts'

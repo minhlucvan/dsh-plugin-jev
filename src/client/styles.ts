@@ -14,13 +14,13 @@
  * `color-scheme` toggle rather than guessing from a media query, with a
  * dark-first fallback line ahead of each pair for engines without it.
  *
- * @module dsh-plugin-jev/client/styles
+ * @module dsh-plugin-system-one/client/styles
  */
 
 import { STYLESHEET } from './stylesheet.ts'
 
 /** Marks the injected element, so a second instance can find and reuse it. */
-const STYLE_ID = 'dsh-plugin-jev-styles'
+const STYLE_ID = 'dsh-plugin-system-one-styles'
 
 /**
  * Install the stylesheet, once per document.

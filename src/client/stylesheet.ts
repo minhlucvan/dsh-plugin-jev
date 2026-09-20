@@ -18,7 +18,7 @@
  * read: this one is data, and `styles.ts` is the three lines that put it
  * in the document and take it out again.
  *
- * @module dsh-plugin-jev/client/stylesheet
+ * @module dsh-plugin-system-one/client/stylesheet
  */
 
 const STYLESHEET = `

@@ -1,6 +1,6 @@
 # CLAUDE.md — Working in this Repository
 
-Repository contract for sessions in `dsh-plugin-jev`, a standalone ESM Cordis
+Repository contract for sessions in `dsh-plugin-system-one`, a standalone ESM Cordis
 plugin for DeepSeek Harness that exposes TypeSafe Jev (System One) as agent
 tools.
 

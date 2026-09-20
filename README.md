@@ -1,4 +1,4 @@
-# dsh-plugin-jev
+# dsh-plugin-system-one
 
 TypeSafe [Jev](https://docs.typesafe.ai/introduction) (System One) as a DeepSeek
 Harness plugin.
@@ -28,10 +28,10 @@ Needs Node 22+ and a DSH profile. `dsh-base` supplies everything else.
 ### 1. Put the package in a profile
 
 ```sh
-dsh plugin --profile web add github:minhlucvan/dsh-plugin-jev
+dsh plugin --profile web add github:minhlucvan/dsh-plugin-system-one
 
 # or a local checkout, while developing:
-dsh plugin --profile web add link:/path/to/dsh-plugin-jev
+dsh plugin --profile web add link:/path/to/dsh-plugin-system-one
 ```
 
 ### 2. List it as a bundle
@@ -46,7 +46,7 @@ So the plugin's own `cordis.patch.yml` applies. In
       "bundles": [
         "@deepseek-ai/dsh-base",
         "@deepseek-ai/dsh-web-app",
-        "dsh-plugin-jev"
+        "dsh-plugin-system-one"
       ]
     }
   }
@@ -61,8 +61,8 @@ only if you want it:
 
 ```yaml
 - insert:
-    - id: dsh-plugin-jev-routes
-      name: dsh-plugin-jev/routes
+    - id: dsh-plugin-system-one-routes
+      name: dsh-plugin-system-one/routes
 ```
 
 | Companion | Needs | Ordinary profiles |
@@ -92,7 +92,7 @@ in the settings page reaches the very next tool call without a restart.
 ### 4. Restart and check
 
 ```sh
-curl http://127.0.0.1:3080/api/dsh-plugin-jev/health
+curl http://127.0.0.1:3080/api/dsh-plugin-system-one/health
 # {"ok":true,"enabled":true,"model":"jev-latest"}
 ```
 
@@ -183,7 +183,7 @@ Four surfaces over one ledger, so they cannot disagree:
 | **Settings → System One** | totals, billed input tokens, the Mtok figure, per-tool breakdown, recent calls |
 | `/jev usage` | the same totals without a model round trip; `/jev reset` zeroes them |
 | `jev_usage` tool | lets the agent price a judgement before repeating it |
-| `GET /api/dsh-plugin-jev/usage` | the same ledger as JSON |
+| `GET /api/dsh-plugin-system-one/usage` | the same ledger as JSON |
 
 ---
 
@@ -233,7 +233,7 @@ benchmark prices; the other three cover decisions the benchmark does not measure
 
 Each question is atomic, they are all evaluated in parallel against one state,
 and the answers are combined in code rather than in a prompt. The banks are also
-readable at `GET /api/dsh-plugin-jev/catalog`.
+readable at `GET /api/dsh-plugin-system-one/catalog`.
 
 ---
 
@@ -304,7 +304,7 @@ without unmounting anything else.
 | `./prompt` | a system-prompt section telling the agent to **delegate a decision instead of reasoning it out**, and which shapes to delegate. This is the adoption lever — see below |
 | `./skills` | `jev-narrow-judgements` — when a Jev call beats reasoning, how to keep the state small, how to read a route. The body is rendered from the live thresholds |
 | `./commands` | `/jev` — `usage` and `reset`, read from the ledger without touching the model |
-| `./routes` | `GET /api/dsh-plugin-jev/{health,usage,catalog}`; no route returns a credential |
+| `./routes` | `GET /api/dsh-plugin-system-one/{health,usage,catalog}`; no route returns a credential |
 | `./client` | the browser face: settings, the API-key field, and the usage panel |
 | `./invariant` | asserts the ledger's accounting identity — cumulative totals must equal what was evicted plus what is retained |
 

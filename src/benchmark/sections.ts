@@ -6,7 +6,7 @@
  * beside it, tokens follow as the supporting figure, and correctness sits last,
  * so a cheap shape cannot win by answering the wrong question.
  *
- * @module dsh-plugin-jev/benchmark/sections
+ * @module dsh-plugin-system-one/benchmark/sections
  */
 
 import type { ApproachId } from './approaches.ts'

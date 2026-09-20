@@ -19,7 +19,7 @@
  * wherever it appears in a report. Which *shape* a Jev call takes is priced in
  * `./approaches.ts`.
  *
- * @module dsh-plugin-jev/benchmark/cost
+ * @module dsh-plugin-system-one/benchmark/cost
  */
 
 /** Token cost, dollar cost, and wall-clock cost of one arm for one item. */

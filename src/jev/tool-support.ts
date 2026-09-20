@@ -7,7 +7,7 @@
  * turns a wasted billed request into a precise error the model can correct on
  * the next turn.
  *
- * @module dsh-plugin-jev/jev/tools/shared
+ * @module dsh-plugin-system-one/jev/tools/shared
  */
 
 import type { JevAnswer, JevJson, JevQuestion } from './contracts.ts'

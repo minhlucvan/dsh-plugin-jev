@@ -11,7 +11,7 @@
  * mirrors the host into the store and `save` writes back through it, so a
  * host-side change is never silently divergent.
  *
- * @module dsh-plugin-jev/client/store
+ * @module dsh-plugin-system-one/client/store
  */
 
 import { createStore } from 'zustand/vanilla'

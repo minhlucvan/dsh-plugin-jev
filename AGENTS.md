@@ -21,7 +21,7 @@ standalone-plugin template and follows that template's contract.
   that leave this repository, and do not add `link:` or `file:` dependencies.
 - Describe repository files with project-root paths such as
   `docs/dsh-plugin-contracts.md`; never use parent-directory navigation.
-- The package name is `dsh-plugin-jev` and the Cordis plugin id is `jev`. Use
+- The package name is `dsh-plugin-system-one` and the Cordis plugin id is `jev`. Use
   both verbatim in package metadata, bundle rows, invariant registration, tests,
   and documentation.
 - Update `README.md`, configuration JSDoc, tests, and `cordis.patch.yml` together

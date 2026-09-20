@@ -12,7 +12,7 @@
  * exact identity to recheck — `totals === evicted + Σ(retained)` — which is
  * what the package's invariant companion asserts.
  *
- * @module dsh-plugin-jev/jev/ledger
+ * @module dsh-plugin-system-one/jev/ledger
  */
 
 /** One recorded evaluation. */

@@ -13,7 +13,7 @@
  * costs. Each shape's answers are graded against the corpus's expected answer,
  * so a cheaper shape cannot win by answering the wrong question.
  *
- * @module dsh-plugin-jev/benchmark/live
+ * @module dsh-plugin-system-one/benchmark/live
  */
 
 import type { BenchmarkItem } from './corpus.ts'

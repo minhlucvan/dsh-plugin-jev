@@ -5,7 +5,7 @@
  * merely disbelieve it: the price list, the fallback threshold, the provenance
  * of the modelled arm, and the caveats that keep the claim honest.
  *
- * @module dsh-plugin-jev/benchmark/method
+ * @module dsh-plugin-system-one/benchmark/method
  */
 
 import { PERCENT_SCALE, share, tokenCount } from './format.ts'

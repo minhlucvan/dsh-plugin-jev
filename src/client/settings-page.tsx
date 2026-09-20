@@ -8,7 +8,7 @@
  * The page holds no state and no rendering logic of its own, so it does not
  * grow as the panel does.
  *
- * @module dsh-plugin-jev/client/settings-page
+ * @module dsh-plugin-system-one/client/settings-page
  */
 
 import type { ReactElement } from 'react'

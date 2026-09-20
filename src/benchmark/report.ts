@@ -12,7 +12,7 @@
  * four, and comparing a three-item total with a four-item one would flatter a
  * shape for the wrong reason.
  *
- * @module dsh-plugin-jev/benchmark/report
+ * @module dsh-plugin-system-one/benchmark/report
  */
 
 import { APPROACHES, BASELINE_ARM } from './approaches.ts'

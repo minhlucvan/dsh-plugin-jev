@@ -7,13 +7,13 @@
  * fallback copy, so a missing key is a visible gap rather than English leaking
  * into another language.
  *
- * @module dsh-plugin-jev/client/locale
+ * @module dsh-plugin-system-one/client/locale
  */
 
 import type { LocaleDictionaries } from './contracts.ts'
 
 /** Single namespace owned by this feature. */
-const LOCALE_NAMESPACE = 'dsh-plugin-jev'
+const LOCALE_NAMESPACE = 'dsh-plugin-system-one'
 
 /** The reference dictionary. Every other language must cover its key set. */
 const en = {

@@ -1,12 +1,12 @@
 /**
- * Optional HTTP-route companion for `dsh-plugin-jev`.
+ * Optional HTTP-route companion for `dsh-plugin-system-one`.
  *
  * The routes expose what the plugin already knows, so a dashboard can render it
  * without asking a model anything: whether the plugin is live, what this
  * session has cost, and which classification options ship with the package. No
  * route accepts a credential or returns one.
  *
- * @module dsh-plugin-jev/routes
+ * @module dsh-plugin-system-one/routes
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -24,7 +24,7 @@ const name = 'jev-routes'
 const inject = ['webServer', 'jev']
 
 /** Path prefix this package claims. */
-const ROUTE_PREFIX = '/api/dsh-plugin-jev'
+const ROUTE_PREFIX = '/api/dsh-plugin-system-one'
 
 /** Path reporting whether the plugin is live and which model it uses. */
 const HEALTH_PATH = `${ROUTE_PREFIX}/health`
@@ -133,7 +133,7 @@ function getJevService(ctx: Context): JevService {
   const service: unknown = ctx.get('jev')
   if (!isJevService(service)) {
     throw new Error(
-      'route companion requires the "jev" service; mount the dsh-plugin-jev row first',
+      'route companion requires the "jev" service; mount the dsh-plugin-system-one row first',
     )
   }
   return service

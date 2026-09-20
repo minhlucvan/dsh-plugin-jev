@@ -5,7 +5,7 @@
  * not decide when committing is meaningful — a form that enables Save with
  * nothing to save is a state bug, not a layout choice.
  *
- * @module dsh-plugin-jev/client/save-controls
+ * @module dsh-plugin-system-one/client/save-controls
  */
 
 import type { ReactElement } from 'react'

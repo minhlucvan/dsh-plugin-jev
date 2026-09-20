@@ -11,7 +11,7 @@
  * Question ids are for the caller. They are never sent to the model, so every
  * instructions string restates the question in full.
  *
- * @module dsh-plugin-jev/jev/catalog
+ * @module dsh-plugin-system-one/jev/catalog
  */
 
 import type { JevQuestion } from '#src/jev/contracts'

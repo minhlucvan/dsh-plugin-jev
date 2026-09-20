@@ -10,7 +10,7 @@
  * tokens and time exactly like any other completion, which is why the state
  * appears on both sides of this accounting.
  *
- * @module dsh-plugin-jev/benchmark/questioning
+ * @module dsh-plugin-system-one/benchmark/questioning
  */
 
 import { DEFAULT_ASSUMPTIONS } from './cost.ts'

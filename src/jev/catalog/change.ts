@@ -2,7 +2,7 @@
  * Code change: classify a diff before review, so the right reviewer and the
  * right amount of checking are chosen up front.
  *
- * @module dsh-plugin-jev/jev/catalog/change
+ * @module dsh-plugin-system-one/jev/catalog/change
  */
 
 import type { JevQuestionBank } from './index.ts'

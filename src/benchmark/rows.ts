@@ -7,7 +7,7 @@
  * item, so a missing bank shows up as "not applicable" instead of as a fake
  * saving.
  *
- * @module dsh-plugin-jev/benchmark/rows
+ * @module dsh-plugin-system-one/benchmark/rows
  */
 
 import type { ArmCost, CostAssumptions } from './cost.ts'

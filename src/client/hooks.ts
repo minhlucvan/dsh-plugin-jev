@@ -10,7 +10,7 @@
  * the usage panel's in `./usage-hooks.ts`: both answer to authorities other
  * than the settings scope, and neither belongs in the form's hook set.
  *
- * @module dsh-plugin-jev/client/hooks
+ * @module dsh-plugin-system-one/client/hooks
  */
 
 import { useCallback, useEffect } from 'react'

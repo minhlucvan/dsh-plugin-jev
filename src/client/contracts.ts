@@ -6,7 +6,7 @@
  * the members this plugin calls, and a composed profile supplies the real
  * services at runtime.
  *
- * @module dsh-plugin-jev/client/contracts
+ * @module dsh-plugin-system-one/client/contracts
  */
 
 /** Dictionaries keyed by language tag, then by semantic key. */

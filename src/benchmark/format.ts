@@ -6,7 +6,7 @@
  * fixed two-decimal dollar format would print every row as \`$0.00\` and hide the
  * entire comparison.
  *
- * @module dsh-plugin-jev/benchmark/format
+ * @module dsh-plugin-system-one/benchmark/format
  */
 
 /** Decimal places kept on a percentage. */

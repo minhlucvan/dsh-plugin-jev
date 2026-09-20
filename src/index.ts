@@ -4,7 +4,7 @@
  * Mounting this row provides the `jev` service that the `./tools`,
  * `./skills`, `./commands` and `./routes` companions inject.
  *
- * @module dsh-plugin-jev
+ * @module dsh-plugin-system-one
  */
 
 /** Cordis plugin name; keep this stable after publishing. */

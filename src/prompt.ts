@@ -1,5 +1,5 @@
 /**
- * Optional system-prompt companion for `dsh-plugin-jev`.
+ * Optional system-prompt companion for `dsh-plugin-system-one`.
  *
  * A tool description tells the model what a tool does. It does not tell the
  * model to *prefer* it, and a model that has reasoned its way through thousands
@@ -14,7 +14,7 @@
  * It sits in every system prompt, so it is written to be worth its tokens and is
  * one switch away from being removed.
  *
- * @module dsh-plugin-jev/prompt
+ * @module dsh-plugin-system-one/prompt
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -117,7 +117,7 @@ function getJevService(ctx: Context): JevService {
   const service: unknown = ctx.get('jev')
   if (!isJevService(service)) {
     throw new Error(
-      'prompt companion requires the "jev" service; mount the dsh-plugin-jev row first',
+      'prompt companion requires the "jev" service; mount the dsh-plugin-system-one row first',
     )
   }
   return service
@@ -202,7 +202,7 @@ function apply(ctx: Context): void {
   const service = getJevService(ctx)
   if (!service.enabled || !service.adoptionPrompt) {
     ctx.logger.warn(
-      'dsh-plugin-jev prompt guidance is mounted but disabled; the agent was not told to prefer Jev',
+      'dsh-plugin-system-one prompt guidance is mounted but disabled; the agent was not told to prefer Jev',
     )
     return
   }

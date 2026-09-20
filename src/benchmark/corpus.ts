@@ -16,7 +16,7 @@
  * product question — which integration shape should this profile use — is
  * answered per class rather than in aggregate.
  *
- * @module dsh-plugin-jev/benchmark/corpus
+ * @module dsh-plugin-system-one/benchmark/corpus
  */
 
 import type { JevJson, JevQuestion } from '#src/jev/contracts'

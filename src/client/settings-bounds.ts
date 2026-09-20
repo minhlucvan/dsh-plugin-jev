@@ -6,7 +6,7 @@
  * like. Normalization is the single place a stored value is judged; everything
  * above it may assume a complete, in-range snapshot.
  *
- * @module dsh-plugin-jev/client/settings-bounds
+ * @module dsh-plugin-system-one/client/settings-bounds
  */
 
 /** Inclusive bounds a numeric field must fall inside. */

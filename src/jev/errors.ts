@@ -6,7 +6,7 @@
  * large", so the classification lives in one place instead of being inferred
  * from a status code at each call site.
  *
- * @module dsh-plugin-jev/jev/errors
+ * @module dsh-plugin-system-one/jev/errors
  */
 
 /** Failure codes this package reports. */

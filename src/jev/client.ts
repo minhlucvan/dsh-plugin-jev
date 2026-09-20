@@ -8,7 +8,7 @@
  * ledger, or the tool surface — so it stays testable against an injected
  * `fetch`.
  *
- * @module dsh-plugin-jev/jev/client
+ * @module dsh-plugin-system-one/jev/client
  */
 
 import { isJevEvaluation } from './contracts.ts'

@@ -6,7 +6,7 @@
  * request from being billed, the usage ledger, and the confidence policy. The
  * faces stay thin because the decisions live here once.
  *
- * @module dsh-plugin-jev/jev/service
+ * @module dsh-plugin-system-one/jev/service
  */
 
 import { createJevClient } from './client.ts'

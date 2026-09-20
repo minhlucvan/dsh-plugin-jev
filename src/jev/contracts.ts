@@ -12,7 +12,7 @@
  * interface, so an interface here would make every response unusable without a
  * cast.
  *
- * @module dsh-plugin-jev/jev/contracts
+ * @module dsh-plugin-system-one/jev/contracts
  */
 
 /** Any lossless JSON value Jev accepts or returns. */

@@ -9,7 +9,7 @@
  * Every field is a stacked column: label, control, help text, with the host's
  * own styling in `styles.ts`; this file only names the parts.
  *
- * @module dsh-plugin-jev/client/settings-fields
+ * @module dsh-plugin-system-one/client/settings-fields
  */
 
 import type { ReactElement } from 'react'
@@ -30,7 +30,7 @@ import type {
 import type { Translate } from './translate.ts'
 
 /** DOM id prefix for every field, so each label points at its own input. */
-const FIELD_ID_PREFIX = 'dsh-plugin-jev'
+const FIELD_ID_PREFIX = 'dsh-plugin-system-one'
 
 /**
  * String fields, rendered in this order. `apiKeyEnv` is deliberately absent:

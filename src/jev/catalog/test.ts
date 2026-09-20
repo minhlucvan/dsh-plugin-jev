@@ -1,7 +1,7 @@
 /**
  * Test triage: classify a failure or a test before spending time on it.
  *
- * @module dsh-plugin-jev/jev/catalog/test
+ * @module dsh-plugin-system-one/jev/catalog/test
  */
 
 import type { JevQuestionBank } from './index.ts'

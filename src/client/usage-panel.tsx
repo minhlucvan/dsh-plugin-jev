@@ -7,7 +7,7 @@
  * throwing — a settings section that crashes while rendering abdicates and takes
  * its nav row with it, which is a far worse outcome than a visible error line.
  *
- * @module dsh-plugin-jev/client/usage-panel
+ * @module dsh-plugin-system-one/client/usage-panel
  */
 
 import type { ReactElement } from 'react'

@@ -1,13 +1,13 @@
 {
-  "name": "dsh-plugin-jev",
+  "name": "dsh-plugin-system-one",
   "description": "TypeSafe Jev (System One) integration for DeepSeek Harness: typed, calibrated decisions as agent tools, plus token accounting that shows what the reasoning costs.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/minhlucvan/dsh-plugin-jev.git"
+    "url": "git+https://github.com/minhlucvan/dsh-plugin-system-one.git"
   },
-  "homepage": "https://github.com/minhlucvan/dsh-plugin-jev#readme",
+  "homepage": "https://github.com/minhlucvan/dsh-plugin-system-one#readme",
   "bugs": {
-    "url": "https://github.com/minhlucvan/dsh-plugin-jev/issues"
+    "url": "https://github.com/minhlucvan/dsh-plugin-system-one/issues"
   },
   "author": "Luc Van Minh",
   "keywords": [

@@ -11,11 +11,11 @@
  * must fail as a described error rather than as an `undefined` field rendered
  * somewhere deep in the panel.
  *
- * @module dsh-plugin-jev/client/api
+ * @module dsh-plugin-system-one/client/api
  */
 
 /** Path prefix the route companion claims. */
-const ROUTE_PREFIX = '/api/dsh-plugin-jev'
+const ROUTE_PREFIX = '/api/dsh-plugin-system-one'
 
 /** Path reporting whether the plugin is live and which model it uses. */
 const HEALTH_PATH = `${ROUTE_PREFIX}/health`

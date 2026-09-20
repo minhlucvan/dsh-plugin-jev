@@ -17,7 +17,7 @@
  * same order, with the same bounds. A field the UI can set but the host ignores
  * would be a lie, and a host field the UI cannot reach would be a dead setting.
  *
- * @module dsh-plugin-jev/settings
+ * @module dsh-plugin-system-one/settings
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -33,7 +33,7 @@ import type { JevService } from './jev/service.ts'
 type CredentialFactory = (config: ResolvedConfig) => () => Promise<string | undefined>
 
 /** Settings namespace this plugin owns and the browser page binds. */
-const SETTINGS_NAMESPACE = 'dsh-plugin-jev'
+const SETTINGS_NAMESPACE = 'dsh-plugin-system-one'
 
 /** The fields a user may override, mirroring the browser settings page. */
 interface UserSettings {

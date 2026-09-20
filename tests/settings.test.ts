@@ -134,7 +134,7 @@ async function installAgainstFake(
 
 function testNamespaceIsTheOneThePageBinds(): void {
   expect.hasAssertions()
-  expect(SETTINGS_NAMESPACE).toBe('dsh-plugin-jev')
+  expect(SETTINGS_NAMESPACE).toBe('dsh-plugin-system-one')
 }
 
 function testProjectionFollowsTheProfile(): void {

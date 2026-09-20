@@ -1,7 +1,7 @@
 /**
  * Reasoning shape: what kind of work a task is and how much it can be trusted from the state alone.
  *
- * @module dsh-plugin-jev/jev/catalog/reasoning
+ * @module dsh-plugin-system-one/jev/catalog/reasoning
  */
 
 import type { JevQuestionBank } from './index.ts'

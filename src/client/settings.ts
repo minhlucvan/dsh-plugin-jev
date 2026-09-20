@@ -6,7 +6,7 @@
  * it — the store, the hooks, the fields — may then assume a complete, in-range
  * snapshot, which is what keeps defensive checks out of every render.
  *
- * @module dsh-plugin-jev/client/settings
+ * @module dsh-plugin-system-one/client/settings
  */
 
 import type {

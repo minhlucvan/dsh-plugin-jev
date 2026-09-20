@@ -7,7 +7,7 @@
  * to rest on. Catching them locally turns a wasted call into an immediate,
  * specific message.
  *
- * @module dsh-plugin-jev/jev/validation
+ * @module dsh-plugin-system-one/jev/validation
  */
 
 import type { JevJson, JevQuestion } from './contracts.ts'

@@ -14,7 +14,7 @@
  * separate for the same reason: it answers to the credential remote, not to the
  * settings scope, and it holds a value the others must never see.
  *
- * @module dsh-plugin-jev/client/context
+ * @module dsh-plugin-system-one/client/context
  */
 
 import type { ReactElement, ReactNode } from 'react'

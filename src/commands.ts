@@ -1,12 +1,12 @@
 /**
- * Optional command companion for `dsh-plugin-jev`.
+ * Optional command companion for `dsh-plugin-system-one`.
  *
  * A slash command runs against the receiving agent without being sent to the
  * model, which makes it the right shape for the one thing an operator wants to
  * check directly: what this session's judgements have cost. The accounting is
  * read synchronously from the ledger, so reporting it costs no tokens at all.
  *
- * @module dsh-plugin-jev/commands
+ * @module dsh-plugin-system-one/commands
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -135,7 +135,7 @@ function getJevService(ctx: Context): JevService {
   const service: unknown = ctx.get('jev')
   if (!isJevService(service)) {
     throw new Error(
-      'command companion requires the "jev" service; mount the dsh-plugin-jev row first',
+      'command companion requires the "jev" service; mount the dsh-plugin-system-one row first',
     )
   }
   return service

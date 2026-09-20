@@ -210,7 +210,7 @@ async function testScopeSourceKeepsTheReceiver(): Promise<void> {
 
 function testLocaleDictionariesAgree(): void {
   expect.hasAssertions()
-  expect(LOCALE_NAMESPACE).toBe('dsh-plugin-jev')
+  expect(LOCALE_NAMESPACE).toBe('dsh-plugin-system-one')
 
   const reference = Object.keys(locales.en ?? {}).toSorted()
   expect(reference.length).toBeGreaterThan(NO_KEYS)

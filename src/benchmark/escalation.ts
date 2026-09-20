@@ -7,7 +7,7 @@
  * to keep. Ranking by confidence is that policy, and both a threshold
  * (`escalatedIds`) and a count (`rankedIds`) describe it from opposite ends.
  *
- * @module dsh-plugin-jev/benchmark/escalation
+ * @module dsh-plugin-system-one/benchmark/escalation
  */
 
 import type { JevAnswer } from '#src/jev/contracts'

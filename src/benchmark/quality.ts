@@ -13,7 +13,7 @@
  * string requires the primitive's own reading rule, and using the package's
  * routing helpers keeps that rule in one place.
  *
- * @module dsh-plugin-jev/benchmark/quality
+ * @module dsh-plugin-system-one/benchmark/quality
  */
 
 import type { JevAnswer, JevScoreAnswer } from '#src/jev/contracts'

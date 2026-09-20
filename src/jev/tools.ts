@@ -27,7 +27,7 @@
  * switches, so a deployment that only wants accounting never pays prompt
  * budget for the rest.
  *
- * @module dsh-plugin-jev/jev/tools
+ * @module dsh-plugin-system-one/jev/tools
  */
 
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'

@@ -8,8 +8,8 @@
 # stay first.
 
 - insert:
-    - id: dsh-plugin-jev
-      name: 'dsh-plugin-jev'
+    - id: dsh-plugin-system-one
+      name: 'dsh-plugin-system-one'
       config:
         # Name of the reference the credential is resolved from. Store the key
         # itself in the settings page (or in the host credential file); the
@@ -20,22 +20,22 @@
         confirmFloor: 0.85
 
     # The tool face is the product: these are the tools the agent calls.
-    - id: dsh-plugin-jev-tools
-      name: 'dsh-plugin-jev/tools'
+    - id: dsh-plugin-system-one-tools
+      name: 'dsh-plugin-system-one/tools'
 
     # Teaches the agent when a Jev call is cheaper than reasoning it out.
-    - id: dsh-plugin-jev-skills
-      name: 'dsh-plugin-jev/skills'
+    - id: dsh-plugin-system-one-skills
+      name: 'dsh-plugin-system-one/skills'
 
     # `/jev` reports the session's token accounting without sending a message.
-    - id: dsh-plugin-jev-commands
-      name: 'dsh-plugin-jev/commands'
+    - id: dsh-plugin-system-one-commands
+      name: 'dsh-plugin-system-one/commands'
 
     # Tells the agent, in its system prompt, to delegate a narrow decision rather
     # than reason it out. This is the adoption lever: a tool description says what
     # a tool does, not that it should be preferred.
-    - id: dsh-plugin-jev-prompt
-      name: 'dsh-plugin-jev/prompt'
+    - id: dsh-plugin-system-one-prompt
+      name: 'dsh-plugin-system-one/prompt'
 
     # Opt-in rows, because a pending injection blocks startup and not every
     # profile provides their services:

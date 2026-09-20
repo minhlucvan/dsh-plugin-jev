@@ -1,7 +1,7 @@
 /**
  * Testing: the decision an agent makes when a test run comes back red.
  *
- * @module dsh-plugin-jev/benchmark/items-testing
+ * @module dsh-plugin-system-one/benchmark/items-testing
  */
 
 import { TEST_BANK } from '#src/jev/catalog/test'

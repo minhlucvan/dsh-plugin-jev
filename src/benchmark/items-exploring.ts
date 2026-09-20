@@ -1,7 +1,7 @@
 /**
  * Exploring: the decision an agent makes before it starts an unfamiliar task.
  *
- * @module dsh-plugin-jev/benchmark/items-exploring
+ * @module dsh-plugin-system-one/benchmark/items-exploring
  */
 
 import { REASONING_BANK } from '#src/jev/catalog/reasoning'

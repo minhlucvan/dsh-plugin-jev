@@ -6,7 +6,7 @@
  * weaker per task, where it was wrong, where the fallback stops paying, and
  * finally the method and the caveats.
  *
- * @module dsh-plugin-jev/benchmark/render
+ * @module dsh-plugin-system-one/benchmark/render
  */
 
 import { renderLimitations, renderMethod } from './method.ts'

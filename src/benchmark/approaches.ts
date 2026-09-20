@@ -20,7 +20,7 @@
  *    round trips stop overlapping; it is the shape the doctrine warns about,
  *    priced so the warning has a number.
  *
- * @module dsh-plugin-jev/benchmark/approaches
+ * @module dsh-plugin-system-one/benchmark/approaches
  */
 
 import { getBank } from '#src/jev/catalog'

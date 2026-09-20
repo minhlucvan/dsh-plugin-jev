@@ -1,7 +1,7 @@
 /**
  * Content handling: classify a passage before it is copied or logged.
  *
- * @module dsh-plugin-jev/jev/catalog/content
+ * @module dsh-plugin-system-one/jev/catalog/content
  */
 
 import type { JevQuestionBank } from './index.ts'

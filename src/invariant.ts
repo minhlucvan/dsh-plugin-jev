@@ -1,5 +1,5 @@
 /**
- * Package-owned invariant companion for `dsh-plugin-jev`.
+ * Package-owned invariant companion for `dsh-plugin-system-one`.
  *
  * The package owns one authoritative data relationship: the usage ledger's
  * cumulative counters must equal the totals of the entries it evicted plus the
@@ -8,7 +8,7 @@
  * reset, or a counter that drifted would break. The installer asserts it
  * through the service rather than reaching into the ledger's internals.
  *
- * @module dsh-plugin-jev/invariant
+ * @module dsh-plugin-system-one/invariant
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -16,7 +16,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { isRecord } from './jev/contracts.ts'
 
 /** Full npm package name that owns this contribution. */
-const PACKAGE_NAME = 'dsh-plugin-jev'
+const PACKAGE_NAME = 'dsh-plugin-system-one'
 
 /** Cordis companion plugin name. */
 const name = 'jev-invariant'

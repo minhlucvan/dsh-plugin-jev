@@ -10,7 +10,7 @@
  * refuses, because losing a key to a failed call is the one outcome the user
  * cannot recover from.
  *
- * @module dsh-plugin-jev/client/credential-store
+ * @module dsh-plugin-system-one/client/credential-store
  */
 
 import { createStore } from 'zustand/vanilla'

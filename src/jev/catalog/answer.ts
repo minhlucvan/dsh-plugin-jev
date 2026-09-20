@@ -1,7 +1,7 @@
 /**
  * Draft self-check: audit a candidate answer before it is returned.
  *
- * @module dsh-plugin-jev/jev/catalog/answer
+ * @module dsh-plugin-system-one/jev/catalog/answer
  */
 
 import type { JevQuestionBank } from './index.ts'

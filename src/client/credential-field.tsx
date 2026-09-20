@@ -8,7 +8,7 @@
  * variable shadows the reference) reports the reference as not writable, and
  * both actions are disabled rather than left to fail.
  *
- * @module dsh-plugin-jev/client/credential-field
+ * @module dsh-plugin-system-one/client/credential-field
  */
 
 import type { ReactElement } from 'react'
@@ -19,7 +19,7 @@ import type { MessageKey } from './locale.ts'
 import type { Translate } from './translate.ts'
 
 /** DOM id of the credential input, so its label points at it. */
-const CREDENTIAL_FIELD_ID = 'dsh-plugin-jev-credential'
+const CREDENTIAL_FIELD_ID = 'dsh-plugin-system-one-credential'
 
 /** DOM id of the credential hint paragraph. */
 const CREDENTIAL_HINT_ID = `${CREDENTIAL_FIELD_ID}-hint`

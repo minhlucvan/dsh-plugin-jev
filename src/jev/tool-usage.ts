@@ -6,7 +6,7 @@
  * published per-token price. The ledger behind this tool is the same one the
  * browser panel and the HTTP route read, so the three cannot disagree.
  *
- * @module dsh-plugin-jev/jev/tools/usage
+ * @module dsh-plugin-system-one/jev/tools/usage
  */
 
 import { defineTool } from '@deepseek-ai/dsh-tools'

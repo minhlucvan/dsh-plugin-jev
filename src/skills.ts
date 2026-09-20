@@ -1,12 +1,12 @@
 /**
- * Optional skill companion for `dsh-plugin-jev`.
+ * Optional skill companion for `dsh-plugin-system-one`.
  *
  * A skill is routing metadata plus a body the model loads only when the
  * description matches the task. That makes it the right seat for the part of
  * this package that is *judgement* rather than capability: when a Jev call is
  * cheaper than reasoning the answer out, and how to keep the state small.
  *
- * @module dsh-plugin-jev/skills
+ * @module dsh-plugin-system-one/skills
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -216,7 +216,7 @@ function getJevService(ctx: Context): JevService {
   const service: unknown = ctx.get(SERVICE_NAME)
   if (!isJevService(service)) {
     throw new Error(
-      'skill companion requires the "jev" service; mount the dsh-plugin-jev row first',
+      'skill companion requires the "jev" service; mount the dsh-plugin-system-one row first',
     )
   }
   return service
@@ -234,7 +234,7 @@ function apply(ctx: Context): void {
 
   if (enabledTools === NO_TOOLS) {
     ctx.logger.warn(
-      'dsh-plugin-jev skill is mounted but every tool switch is off; the skill routes to nothing',
+      'dsh-plugin-system-one skill is mounted but every tool switch is off; the skill routes to nothing',
     )
   }
 

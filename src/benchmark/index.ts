@@ -7,7 +7,7 @@
  * and round trips the API actually reported, and grades the answers it got back
  * against the answer a careful reader reaches.
  *
- * @module dsh-plugin-jev/benchmark
+ * @module dsh-plugin-system-one/benchmark
  */
 
 import { breakEvenOf } from './breakeven.ts'

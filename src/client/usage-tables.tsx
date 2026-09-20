@@ -6,7 +6,7 @@
  * so a table can be reordered or rendered twice without rewiring the panel, and
  * an update to one slice does not re-render the others.
  *
- * @module dsh-plugin-jev/client/usage-tables
+ * @module dsh-plugin-system-one/client/usage-tables
  */
 
 import type { ReactElement } from 'react'

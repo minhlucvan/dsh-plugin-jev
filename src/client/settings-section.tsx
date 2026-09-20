@@ -10,7 +10,7 @@
  * Structure and class names only. Every rule lives in `styles.ts`, so the
  * markup here reads as an outline of the panel.
  *
- * @module dsh-plugin-jev/client/settings-section
+ * @module dsh-plugin-system-one/client/settings-section
  */
 
 import type { ReactElement } from 'react'

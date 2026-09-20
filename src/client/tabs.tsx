@@ -11,14 +11,14 @@
  * open. That is not plugin state, so it does not belong in a store — nothing
  * outside this component can observe it, and nothing survives a remount.
  *
- * @module dsh-plugin-jev/client/tabs
+ * @module dsh-plugin-system-one/client/tabs
  */
 
 import { useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 
 /** DOM id prefix shared by a tab and the panel it controls. */
-const TAB_ID_PREFIX = 'dsh-plugin-jev-tab'
+const TAB_ID_PREFIX = 'dsh-plugin-system-one-tab'
 
 /** Index of the first tab, which opens by default. */
 const FIRST_TAB = 0

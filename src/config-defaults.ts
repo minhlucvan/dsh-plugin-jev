@@ -8,7 +8,7 @@ import { BANK_IDS } from './jev/catalog/index.ts'
  * home: a range stated in the schema and restated in the validator is a range
  * that will eventually disagree with itself.
  *
- * @module dsh-plugin-jev/config-defaults
+ * @module dsh-plugin-system-one/config-defaults
  */
 
 /** Environment variable read for the API key when the profile names no other. */

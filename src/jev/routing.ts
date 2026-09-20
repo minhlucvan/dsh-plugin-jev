@@ -7,7 +7,7 @@
  * the pair into one of three actions, so every caller applies the same rule
  * instead of inventing its own threshold.
  *
- * @module dsh-plugin-jev/jev/routing
+ * @module dsh-plugin-system-one/jev/routing
  */
 
 import type { JevAnswer } from './contracts.ts'

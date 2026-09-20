@@ -5,7 +5,7 @@
  * on their own — a retry policy and a `Retry-After` parse are easy to get
  * subtly wrong and cheap to pin down without a network.
  *
- * @module dsh-plugin-jev/jev/transport
+ * @module dsh-plugin-system-one/jev/transport
  */
 
 import { setTimeout as delay } from 'node:timers/promises'

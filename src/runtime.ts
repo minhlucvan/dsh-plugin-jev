@@ -13,7 +13,7 @@
  * than a load failure: the settings section this plugin installs is itself the
  * interface that supplies the key, so refusing to activate would remove it.
  *
- * @module dsh-plugin-jev/runtime
+ * @module dsh-plugin-system-one/runtime
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -249,17 +249,17 @@ function apply(ctx: Context, config: Config): void {
     credentialFor: runtime.credentialFor,
   })
   if (resolved.enabled) {
-    runtime.info(`dsh-plugin-jev ready: model ${resolved.model} at ${resolved.baseUrl}`)
+    runtime.info(`dsh-plugin-system-one ready: model ${resolved.model} at ${resolved.baseUrl}`)
     if (!runtime.credentialAvailable()) {
       runtime.warn(
-        `dsh-plugin-jev has no TypeSafe key yet: set one in System One settings, or `
+        `dsh-plugin-system-one has no TypeSafe key yet: set one in System One settings, or `
         + `export "${resolved.apiKeyEnv}". Tool calls fail until it is configured.`,
       )
     }
     return
   }
   runtime.warn(
-    'dsh-plugin-jev is mounted with "enabled: false"; no evaluation will be sent',
+    'dsh-plugin-system-one is mounted with "enabled: false"; no evaluation will be sent',
   )
 }
 

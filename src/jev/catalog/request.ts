@@ -1,7 +1,7 @@
 /**
  * Incoming request routing: classify what arrived and how risky it is.
  *
- * @module dsh-plugin-jev/jev/catalog/request
+ * @module dsh-plugin-system-one/jev/catalog/request
  */
 
 import type { JevQuestionBank } from './index.ts'

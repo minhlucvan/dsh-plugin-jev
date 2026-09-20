@@ -9,7 +9,7 @@
  * read-only view refreshed from the package's own routes, and a failed read
  * keeps the last good figures beside the reason instead of blanking them.
  *
- * @module dsh-plugin-jev/client/usage-store
+ * @module dsh-plugin-system-one/client/usage-store
  */
 
 import { createStore } from 'zustand/vanilla'

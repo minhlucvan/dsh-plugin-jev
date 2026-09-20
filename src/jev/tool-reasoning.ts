@@ -7,7 +7,7 @@
  * receives a handful of short lines instead of producing a reasoning trace of
  * its own.
  *
- * @module dsh-plugin-jev/jev/tools/reasoning
+ * @module dsh-plugin-system-one/jev/tools/reasoning
  */
 
 import { defineTool } from '@deepseek-ai/dsh-tools'

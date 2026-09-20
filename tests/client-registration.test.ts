@@ -16,7 +16,7 @@ const TEST_TIMEOUT = 5000
 const EXPECTED_SINGLE_CALL = 1
 const FIRST_INDEX = 0
 const SLOT_NAME = 'settings.section'
-const SLOT_ID = 'dsh-plugin-jev'
+const SLOT_ID = 'dsh-plugin-system-one'
 const HOST_REVISION = 4
 
 /** A settings scope as the client's narrow contract sees it. */

@@ -9,7 +9,7 @@
  * own call, which is exactly what the report prices on the ad-hoc arm. No
  * shipped bank covers it, so the bank shape cannot answer it either.
  *
- * @module dsh-plugin-jev/benchmark/items-comparing
+ * @module dsh-plugin-system-one/benchmark/items-comparing
  */
 
 import type { JevQuestion } from '#src/jev/contracts'
