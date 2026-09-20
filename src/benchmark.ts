@@ -34,25 +34,36 @@ import type { LiveOptions } from './benchmark-live.ts'
 import { buildReport } from './benchmark-report.ts'
 import type { BenchmarkReport, BenchmarkRow } from './benchmark-report.ts'
 
+/** What the API reported for one item, when a live run supplied it. */
+interface MeasuredUsage {
+  /** Tokens billed for the ad-hoc request. */
+  inputTokens: number
+  /** Tokens billed for the bank request, when a bank covers the item. */
+  bankInputTokens: number | undefined
+}
+
 /**
  * Cost every corpus item every way the package supports.
  *
  * @param assumptions - Deployment-shaped constants.
- * @param measured - Live billed input tokens keyed by item id, when available.
+ * @param measured - Live usage keyed by item id, when available.
  * @returns One row per item.
  */
 function buildRows(
   assumptions: CostAssumptions,
-  measured: ReadonlyMap<string, number> = new Map<string, number>(),
+  measured: ReadonlyMap<string, MeasuredUsage> = new Map<string, MeasuredUsage>(),
 ): BenchmarkRow[] {
   return CORPUS.map((item: BenchmarkItem): BenchmarkRow => {
     const baseline = baselineCost(item, assumptions)
     const live = measured.get(item.id)
     let jev = jevModelledCost(item, assumptions)
     if (live !== undefined) {
-      jev = jevMeasuredCost(item, live, assumptions)
+      jev = jevMeasuredCost(item, live.inputTokens, assumptions)
     }
-    const bank = jevBankCost(item, assumptions)
+    let bank = jevBankCost(item, assumptions)
+    if (live?.bankInputTokens !== undefined) {
+      bank = jevBankCost(item, assumptions, live.bankInputTokens)
+    }
     let savedBank: { tokens: number; percent: number } | undefined = undefined
     if (bank !== undefined) {
       savedBank = saving(baseline, bank)
@@ -108,9 +119,12 @@ async function runLiveBenchmark(
   assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
 ): Promise<BenchmarkReport> {
   const measurements = await measureItems(CORPUS, options)
-  const byId = new Map<string, number>()
+  const byId = new Map<string, MeasuredUsage>()
   for (const measurement of measurements) {
-    byId.set(measurement.itemId, measurement.billedInputTokens)
+    byId.set(measurement.itemId, {
+      inputTokens: measurement.billedInputTokens,
+      bankInputTokens: measurement.bankInputTokens,
+    })
   }
   return buildReport(buildRows(assumptions, byId), assumptions, 'measured')
 }

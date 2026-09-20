@@ -181,11 +181,13 @@ function jevModelledCost(
  *
  * @param item - Corpus item being measured.
  * @param assumptions - Deployment-shaped constants.
+ * @param measuredInputTokens - Tokens the API billed, when it was measured.
  * @returns The bank-mode cost, or undefined when no shipped bank matches.
  */
 function jevBankCost(
   item: BenchmarkItem,
   assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
+  measuredInputTokens?: number,
 ): ArmCost | undefined {
   if (item.bank === undefined) {
     return undefined
@@ -194,7 +196,7 @@ function jevBankCost(
   if (bank === undefined) {
     return undefined
   }
-  const billedInputTokens = estimateJsonTokens({
+  const billedInputTokens = measuredInputTokens ?? estimateJsonTokens({
     model: 'jev-latest',
     state: item.state,
     questions: bank.questions,
@@ -224,7 +226,12 @@ function jevMeasuredCost(
   assumptions: CostAssumptions = DEFAULT_ASSUMPTIONS,
 ): ArmCost {
   const modelled = jevModelledCost(item, assumptions)
-  return { ...modelled, billedInputTokens }
+  return armCost({
+    promptTokens: modelled.promptTokens,
+    completionTokens: modelled.completionTokens,
+    billedInputTokens,
+    completionWeight: assumptions.completionWeight,
+  })
 }
 
 /**

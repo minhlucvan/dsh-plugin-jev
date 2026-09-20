@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { baselineCost, jevBankCost, jevModelledCost } from '#src/benchmark-cost'
+import { baselineCost, jevBankCost, jevMeasuredCost, jevModelledCost } from '#src/benchmark-cost'
 import { CORPUS, countDecisions, getItem } from '#src/benchmark-corpus'
 import { estimateTokens } from '#src/benchmark-estimator'
 import { runModelledBenchmark } from '#src/benchmark'
@@ -95,6 +95,24 @@ function testBankArmIsTheOneThatSaves(): void {
   expect(report.totals.saved.percent).toBeLessThan(ZERO)
 }
 
+/** A billed figure far from the estimator, so a substitution is visible. */
+const MEASURED_INPUT_TOKENS = 9001
+
+function testMeasuredArmReplacesTheEstimate(): void {
+  expect.hasAssertions()
+  const item = CORPUS[FIRST_INDEX]
+  if (item === undefined) {
+    throw new TypeError('the corpus is empty')
+  }
+  const modelled = jevModelledCost(item)
+  const measured = jevMeasuredCost(item, MEASURED_INPUT_TOKENS)
+  expect(measured.billedInputTokens).toBe(MEASURED_INPUT_TOKENS)
+  expect(measured.totalTokens).not.toBe(modelled.totalTokens)
+  expect(measured.totalTokens).toBe(
+    modelled.totalTokens - modelled.billedInputTokens + MEASURED_INPUT_TOKENS,
+  )
+}
+
 function testReportStatesItsMode(): void {
   expect.hasAssertions()
   const markdown = renderReport(runModelledBenchmark())
@@ -125,6 +143,8 @@ describe('benchmark', () => {
   it('changes the comparison when output is priced higher', { timeout: TEST_TIMEOUT }, testWeightingChangesTheComparison)
 
   it('shows the bank arm as the shape that saves', { timeout: TEST_TIMEOUT }, testBankArmIsTheOneThatSaves)
+
+  it('replaces the estimate when the API reported usage', { timeout: TEST_TIMEOUT }, testMeasuredArmReplacesTheEstimate)
 
   it('states its own measurement mode', { timeout: TEST_TIMEOUT }, testReportStatesItsMode)
 

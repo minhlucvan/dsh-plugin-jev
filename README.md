@@ -19,12 +19,20 @@ over the usage ledger.
 corpus. The result is **not** a uniform win, and this README does not pretend
 otherwise:
 
+Measured against the live API, both Jev arms, at `--output-weight 4`:
+
 | Shape | Baseline tokens | Jev tokens | Saved |
 | --- | ---: | ---: | ---: |
-| Ad-hoc `jev_ask`, raw tokens | 3,311 | 4,161 | **−25.7%** |
-| Ad-hoc `jev_ask`, output-weighted ×4 | 6,614 | 8,700 | **−31.5%** |
-| Built-in bank, raw tokens | 1,544 | 1,648 | **−6.7%** |
-| Built-in bank, output-weighted ×4 | 2,948 | 2,104 | **+28.6%** |
+| Ad-hoc `jev_ask`, raw tokens | 3,311 | 5,254 | **−58.7%** |
+| Ad-hoc `jev_ask`, output-weighted ×4 | 6,614 | 9,793 | **−48.1%** |
+| Built-in bank, raw tokens | 1,544 | 2,130 | **−38.0%** |
+| Built-in bank, output-weighted ×4 | 2,948 | 2,586 | **+12.3%** |
+
+The modelled run (`pnpm run bench`, no network) reports a larger bank saving —
+28.6% rather than 12.3% — because the four-characters-per-token estimator
+under-counts Jev's real input tokens by roughly a quarter on this corpus. That
+gap is why `--live` exists, and it is why the measured figures are the ones
+printed here. Run both; trust the measured one.
 
 **When the agent has to restate the evidence inside its tool call, an ad-hoc
 Jev call is not a token saving.** The state is paid for twice — once as the
