@@ -87,7 +87,11 @@ function formatTimestamp(at: number): string {
  * @returns The empty-state paragraph.
  */
 function UsageEmpty({ translate }: UsageTablesProps): ReactElement {
-  return <p role='status'>{translate('usageEmpty')}</p>
+  return (
+    <p className='jev-empty' role='status'>
+      {translate('usageEmpty')}
+    </p>
+  )
 }
 
 /**
@@ -104,8 +108,8 @@ function UsageTotalsList({ translate }: UsageTablesProps): ReactElement | undefi
   const { totals } = report
   return (
     <>
-      <h4>{translate('usageTotalsHeading')}</h4>
-      <dl>
+      <h4 className='jev-group__title'>{translate('usageTotalsHeading')}</h4>
+      <dl className='jev-stats'>
         <dt>{translate('usageCalls')}</dt>
         <dd>{formatCount(totals.calls)}</dd>
         <dt>{translate('usageInputTokens')}</dt>
@@ -135,15 +139,15 @@ function UsageByTool({ translate }: UsageTablesProps): ReactElement {
   if (rows.length === NONE) {
     return (
       <>
-        <h4>{translate('usageByToolHeading')}</h4>
+        <h4 className='jev-group__title'>{translate('usageByToolHeading')}</h4>
         <UsageEmpty translate={translate} />
       </>
     )
   }
   return (
     <>
-      <h4>{translate('usageByToolHeading')}</h4>
-      <table>
+      <h4 className='jev-group__title'>{translate('usageByToolHeading')}</h4>
+      <table className='jev-table'>
         <thead>
           <tr>
             <th scope='col'>{translate('usageColumnTool')}</th>
@@ -179,7 +183,7 @@ function UsageRecent({ translate }: UsageTablesProps): ReactElement {
   if (entries.length === NONE) {
     return (
       <>
-        <h4>{translate('usageRecentHeading')}</h4>
+        <h4 className='jev-group__title'>{translate('usageRecentHeading')}</h4>
         <UsageEmpty translate={translate} />
       </>
     )
@@ -187,8 +191,8 @@ function UsageRecent({ translate }: UsageTablesProps): ReactElement {
   const unit = translate('usageMillis')
   return (
     <>
-      <h4>{translate('usageRecentHeading')}</h4>
-      <table>
+      <h4 className='jev-group__title'>{translate('usageRecentHeading')}</h4>
+      <table className='jev-table'>
         <thead>
           <tr>
             <th scope='col'>{translate('usageColumnWhen')}</th>
@@ -231,14 +235,14 @@ function UsageCatalog({ translate }: UsageTablesProps): ReactElement {
   if (banks.length === NONE) {
     return (
       <>
-        <h4>{translate('usageCatalogHeading')}</h4>
+        <h4 className='jev-group__title'>{translate('usageCatalogHeading')}</h4>
         <p role='status'>{translate('usageCatalogEmpty')}</p>
       </>
     )
   }
   return (
     <>
-      <h4>{translate('usageCatalogHeading')}</h4>
+      <h4 className='jev-group__title'>{translate('usageCatalogHeading')}</h4>
       <ul>
         {banks.map((bank) => (
           <li key={bank.id}>{bank.title}</li>

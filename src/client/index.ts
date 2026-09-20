@@ -22,6 +22,7 @@ import {
 import { createCredentialApi, isCredentialNamespace } from './credentials.ts'
 import { LOCALE_NAMESPACE, locales } from './locale.ts'
 import { SettingsPage } from './settings-page.tsx'
+import { installStyles } from './styles.ts'
 import type { ClientSettings } from './settings.ts'
 import { normalizeSettings } from './settings.ts'
 
@@ -125,6 +126,12 @@ function apply(ctx: Context): void {
     () => locale.register(LOCALE_NAMESPACE, locales),
     'client: dictionaries',
   )
+
+  /*
+   * The sheet is document-scoped, so it is installed once per document rather
+   * than per mount, and the fiber that installed it is the one that removes it.
+   */
+  ctx.effect(() => installStyles(), 'client: styles')
 
   const translate = locale.bind(LOCALE_NAMESPACE)
   const scope = normalizedScope(binder.bind({ namespace: SETTINGS_NAMESPACE }))

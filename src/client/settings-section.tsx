@@ -2,9 +2,13 @@
  * The settings section: layout only.
  *
  * It composes the form, the API-key field, the commit controls and the usage
- * panel, and owns nothing else — no state, no effects, no store access. Its children read the
- * stores through hooks, which is what keeps this file stable as the form grows:
- * adding a field is a change to the fields, not to the section.
+ * panel, and owns nothing else — no state, no effects, no store access. Its
+ * children read the stores through hooks, which is what keeps this file stable
+ * as the form grows: adding a field is a change to the fields, not to the
+ * section.
+ *
+ * Structure and class names only. Every rule lives in `styles.ts`, so the
+ * markup here reads as an outline of the panel.
  *
  * @module dsh-plugin-jev/client/settings-section
  */
@@ -31,10 +35,14 @@ interface SettingsSectionProps {
  */
 function SettingsSection({ translate }: SettingsSectionProps): ReactElement {
   return (
-    <section aria-label={translate('nav')}>
-      <h2>{translate('heading')}</h2>
-      <p>{translate('description')}</p>
-      <SettingsFields translate={translate} />
+    <section className='jev' aria-label={translate('nav')}>
+      <header>
+        <h2 className='jev__title'>{translate('heading')}</h2>
+        <p className='jev__intro'>{translate('description')}</p>
+      </header>
+      <div className='jev-group__fields'>
+        <SettingsFields translate={translate} />
+      </div>
       <CredentialField translate={translate} />
       <SaveControls translate={translate} />
       <UsagePanel translate={translate} />
@@ -43,3 +51,4 @@ function SettingsSection({ translate }: SettingsSectionProps): ReactElement {
 }
 
 export { SettingsSection, type SettingsSectionProps }
+

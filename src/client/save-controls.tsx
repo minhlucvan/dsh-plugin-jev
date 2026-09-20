@@ -54,7 +54,7 @@ function SaveError({ error, translate }: SaveErrorProps): ReactElement | undefin
     return undefined
   }
   return (
-    <p role='alert'>
+    <p className='jev-alert' role='alert'>
       {translate('saveFailed')}: {error}
     </p>
   )
@@ -70,32 +70,37 @@ function SaveControls({ translate }: SaveControlsProps): ReactElement {
   const { saving, dirty, error, save, reset } = useSettingsControls()
 
   return (
-    <>
-      <button
-        type='button'
-        disabled={saving || !dirty}
-        onClick={() => {
-          /*
-           * React ignores a handler's return value, so the promise is
-           * explicitly discarded rather than handed back.
-           */
-          void save()
-        }}
-      >
-        {translate(saveLabelKey(saving))}
-      </button>
-      <button
-        type='button'
-        disabled={saving}
-        onClick={() => {
-          reset()
-        }}
-      >
-        {translate('reset')}
-      </button>
+    <div className='jev-group'>
+      <div className='jev-actions'>
+        <button
+          type='button'
+          className='jev-btn jev-btn--primary'
+          disabled={saving || !dirty}
+          onClick={() => {
+            /*
+             * React ignores a handler's return value, so the promise is
+             * explicitly discarded rather than handed back.
+             */
+            void save()
+          }}
+        >
+          {translate(saveLabelKey(saving))}
+        </button>
+        <button
+          type='button'
+          className='jev-btn jev-btn--quiet'
+          disabled={saving}
+          onClick={() => {
+            reset()
+          }}
+        >
+          {translate('reset')}
+        </button>
+      </div>
       <SaveError error={error} translate={translate} />
-    </>
+    </div>
   )
 }
 
 export { SaveControls, saveLabelKey, type SaveControlsProps }
+

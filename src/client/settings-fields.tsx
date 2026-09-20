@@ -7,6 +7,9 @@
  * each field are locale keys looked up in `FIELD_COPY` rather than strings
  * written here.
  *
+ * Every field is a stacked column: label, control, help text. The host's own
+ * styling lives in `styles.ts`; this file only names the parts.
+ *
  * @module dsh-plugin-jev/client/settings-fields
  */
 
@@ -33,6 +36,9 @@ const NUMBER_FIELDS: readonly NumberFieldName[] = [
   'confirmFloor',
   'ledgerLimit',
 ]
+
+/** Fields whose value is an identifier rather than prose, and reads as code. */
+const CODE_FIELDS: ReadonlySet<SettingsFieldName> = new Set(['apiKeyEnv', 'model', 'baseUrl'])
 
 /** Copy keys describing one field. */
 interface FieldCopy {
@@ -92,7 +98,20 @@ function hintId(field: SettingsFieldName): string {
 }
 
 /**
- * Render a field's label and hint around its input.
+ * Build the class list for a text-style input.
+ *
+ * @param field - The field the input edits.
+ * @returns The input's class names.
+ */
+function inputClass(field: SettingsFieldName): string {
+  if (CODE_FIELDS.has(field)) {
+    return 'jev-input jev-input--code'
+  }
+  return 'jev-input'
+}
+
+/**
+ * Render a field's label, input and hint as one stacked column.
  *
  * @param props - The field, its copy keys, and the input to describe.
  * @returns The label, input and hint.
@@ -108,11 +127,15 @@ function FieldShell({
   children: ReactElement
 }): ReactElement {
   return (
-    <>
-      <label htmlFor={fieldId(field)}>{translate(copy.label)}</label>
+    <div className='jev-field'>
+      <label className='jev-field__label' htmlFor={fieldId(field)}>
+        {translate(copy.label)}
+      </label>
       {children}
-      <p id={hintId(field)}>{translate(copy.hint)}</p>
-    </>
+      <p className='jev-field__hint' id={hintId(field)}>
+        {translate(copy.hint)}
+      </p>
+    </div>
   )
 }
 
@@ -128,6 +151,7 @@ function TextField({ field, translate }: TextFieldProps): ReactElement {
     <FieldShell field={field} copy={FIELD_COPY[field]} translate={translate}>
       <input
         id={fieldId(field)}
+        className={inputClass(field)}
         type='text'
         value={value}
         disabled={disabled}
@@ -156,6 +180,7 @@ function NumberField({ field, translate }: NumberFieldProps): ReactElement {
     <FieldShell field={field} copy={FIELD_COPY[field]} translate={translate}>
       <input
         id={fieldId(field)}
+        className='jev-input'
         type='text'
         inputMode='decimal'
         value={value}
@@ -172,28 +197,37 @@ function NumberField({ field, translate }: NumberFieldProps): ReactElement {
 /**
  * Render the master switch.
  *
+ * The control and its label share a row, because a switch is read as one line;
+ * its help text still sits beneath, indented to the label rather than to the
+ * box.
+ *
  * @param props - The bound translator.
  * @returns The labelled checkbox and its hint.
  */
 function ToggleField({ translate }: FieldProps): ReactElement {
   const { checked, disabled, onChange } = useToggleField()
   return (
-    <FieldShell
-      field='enabled'
-      copy={FIELD_COPY.enabled}
-      translate={translate}
-    >
-      <input
-        id={fieldId('enabled')}
-        type='checkbox'
-        checked={checked}
-        disabled={disabled}
-        aria-describedby={hintId('enabled')}
-        onChange={(event) => {
-          onChange(event.target.checked)
-        }}
-      />
-    </FieldShell>
+    <div className='jev-field'>
+      <div className='jev-check'>
+        <input
+          id={fieldId('enabled')}
+          className='jev-check__input'
+          type='checkbox'
+          checked={checked}
+          disabled={disabled}
+          aria-describedby={hintId('enabled')}
+          onChange={(event) => {
+            onChange(event.target.checked)
+          }}
+        />
+        <label className='jev-field__label' htmlFor={fieldId('enabled')}>
+          {translate(FIELD_COPY.enabled.label)}
+        </label>
+      </div>
+      <p className='jev-field__hint' id={hintId('enabled')}>
+        {translate(FIELD_COPY.enabled.hint)}
+      </p>
+    </div>
   )
 }
 
@@ -228,5 +262,7 @@ export {
   ToggleField,
   fieldId,
   hintId,
+  inputClass,
   type FieldProps,
 }
+

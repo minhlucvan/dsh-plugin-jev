@@ -111,7 +111,11 @@ function CredentialStatus({
   translate,
 }: CredentialStateProps): ReactElement | undefined {
   if (state.status === 'loading') {
-    return <p role='status'>{translate('credentialLoading')}</p>
+    return (
+      <p className='jev-status' role='status'>
+        {translate('credentialLoading')}
+      </p>
+    )
   }
   if (state.status === 'error') {
     /*
@@ -121,11 +125,11 @@ function CredentialStatus({
     return undefined
   }
   return (
-    <>
+    <div className='jev-status'>
       <p role='status'>{translate(credentialStateKey(state.configured))}</p>
       <CredentialSource state={state} translate={translate} />
       <p>{translate(credentialWritabilityKey(state.writable))}</p>
-    </>
+    </div>
   )
 }
 
@@ -143,7 +147,7 @@ function CredentialError({
     return undefined
   }
   return (
-    <p role='alert'>
+    <p className='jev-alert' role='alert'>
       {translate('credentialFailed')}: {state.error}
     </p>
   )
@@ -164,45 +168,54 @@ function CredentialField({ translate }: CredentialFieldProps): ReactElement {
   const locked = field.busy || !field.writable
 
   return (
-    <div>
-      <label htmlFor={CREDENTIAL_FIELD_ID}>
-        {translate('credentialLabel')}
-      </label>
-      <input
-        id={CREDENTIAL_FIELD_ID}
-        type='password'
-        value={field.draft}
-        disabled={locked}
-        autoComplete='off'
-        aria-describedby={CREDENTIAL_HINT_ID}
-        onChange={(event) => {
-          field.setDraft(event.target.value)
-        }}
-      />
-      <p id={CREDENTIAL_HINT_ID}>{translate('credentialHint')}</p>
+    <div className='jev-group jev-card'>
+      <div className='jev-field'>
+        <label className='jev-field__label' htmlFor={CREDENTIAL_FIELD_ID}>
+          {translate('credentialLabel')}
+        </label>
+        <input
+          id={CREDENTIAL_FIELD_ID}
+          className='jev-input'
+          type='password'
+          value={field.draft}
+          disabled={locked}
+          autoComplete='off'
+          aria-describedby={CREDENTIAL_HINT_ID}
+          onChange={(event) => {
+            field.setDraft(event.target.value)
+          }}
+        />
+        <p className='jev-field__hint' id={CREDENTIAL_HINT_ID}>
+          {translate('credentialHint')}
+        </p>
+      </div>
       <CredentialStatus state={field} translate={translate} />
-      <button
-        type='button'
-        disabled={locked || field.draft === ''}
-        onClick={() => {
-          /*
-           * React ignores a handler's return value, so the promise is
-           * explicitly discarded rather than handed back.
-           */
-          void field.save()
-        }}
-      >
-        {translate(credentialSaveKey(field.busy))}
-      </button>
-      <button
-        type='button'
-        disabled={locked}
-        onClick={() => {
-          void field.clear()
-        }}
-      >
-        {translate('credentialClear')}
-      </button>
+      <div className='jev-actions'>
+        <button
+          type='button'
+          className='jev-btn jev-btn--primary'
+          disabled={locked || field.draft === ''}
+          onClick={() => {
+            /*
+             * React ignores a handler's return value, so the promise is
+             * explicitly discarded rather than handed back.
+             */
+            void field.save()
+          }}
+        >
+          {translate(credentialSaveKey(field.busy))}
+        </button>
+        <button
+          type='button'
+          className='jev-btn'
+          disabled={locked}
+          onClick={() => {
+            void field.clear()
+          }}
+        >
+          {translate('credentialClear')}
+        </button>
+      </div>
       <CredentialError state={field} translate={translate} />
     </div>
   )

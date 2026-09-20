@@ -82,7 +82,7 @@ function UsageHealth({ translate }: UsagePanelProps): ReactElement | undefined {
     return undefined
   }
   return (
-    <p>
+    <p className='jev-status'>
       {translate('healthLabel')}: {translate(healthKey(health))} ({health.model})
     </p>
   )
@@ -99,13 +99,17 @@ function UsageBody({ translate }: UsagePanelProps): ReactElement {
 
   if (status === 'error') {
     return (
-      <p role='alert'>
+      <p className='jev-alert' role='alert'>
         {translate('usageFailed')}: {reasonOf(error, translate)}
       </p>
     )
   }
   if (status === 'loading') {
-    return <p role='status'>{translate('usageLoading')}</p>
+    return (
+      <p className='jev-status' role='status'>
+        {translate('usageLoading')}
+      </p>
+    )
   }
   return (
     <>
@@ -129,11 +133,13 @@ function UsagePanel({ translate }: UsagePanelProps): ReactElement {
   const { load } = useUsageActions()
 
   return (
-    <section aria-label={translate('usageHeading')}>
-      <h3>{translate('usageHeading')}</h3>
-      <p>{translate('usageDescription')}</p>
+    <section className='jev-group jev-card' aria-label={translate('usageHeading')}>
+      <h3 className='jev-group__title'>{translate('usageHeading')}</h3>
+      <p className='jev-field__hint'>{translate('usageDescription')}</p>
+      <div className='jev-actions'>
       <button
         type='button'
+        className='jev-btn'
         disabled={status === 'loading'}
         onClick={() => {
           /*
@@ -145,6 +151,7 @@ function UsagePanel({ translate }: UsagePanelProps): ReactElement {
       >
         {translate(refreshKey(status))}
       </button>
+      </div>
       <UsageBody translate={translate} />
     </section>
   )
