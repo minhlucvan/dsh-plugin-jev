@@ -5,7 +5,7 @@ Harness plugin.
 
 Jev is not a chat model. It evaluates typed **questions** against a **state** and
 returns typed answers with probabilities and confidence — no generated prose to
-parse. This package puts that behind six agent tools, system-prompt guidance
+parse. This package puts that behind seven agent tools, system-prompt guidance
 that tells the model to prefer them, a skill carrying the detail, an operator
 command, three HTTP endpoints, and a browser settings page with an API-key
 field.
@@ -105,8 +105,10 @@ at startup instead. Set `enabled: false` to mount it with no credential at all.
 
 ## Benchmarks
 
-Three decisions a coding agent makes every day, answered with and without Jev,
-measured against the live API.
+Four decisions a coding agent makes every day, answered with and without Jev.
+Three are covered by a shipped question bank and measured against the live API;
+the fourth, a nine-question composite fan-out, has no bank, so only the ad-hoc
+arm answers it and its figures are modelled.
 
 | Task | Decisions | Cost | Time | Tokens |
 | --- | ---: | ---: | ---: | ---: |
@@ -122,17 +124,40 @@ contradiction: Jev's tokens cost **$0.042/Mtok against $0.15–0.60** for the ag
 model, and its output is free, so the tokens it adds are the cheap kind and the
 ones it removes are the expensive kind.
 
+**Comparing** is absent from that table: no shipped bank covers a nine-question
+fan-out, so the bank shape cannot answer it.
+
 ### The other shape, for contrast
 
-Asking ad-hoc questions with the free-form tool inverts all three axes: the agent
-then writes the state and the question text itself, so it is slower *and* dearer
-than simply reasoning in context.
+Asking ad-hoc questions with the free-form tool inverts all three axes, over the
+same three bank-covered tasks: the agent then writes the state and the question
+text itself, so it is slower *and* dearer than simply reasoning in context.
 
 | | Cost | Time | Tokens |
 | --- | ---: | ---: | ---: |
 | Without Jev | $0.000917 | 20.1s | 3,107 |
 | With an ad-hoc call | $0.001185 | 35.0s | 4,948 |
 | **Jev vs without** | **−29%** | **−75%** | **−59%** |
+
+### The modelled run
+
+The composite fan-out changes the whole-corpus totals, so `pnpm run bench`
+(the modelled, no-network run) prints these figures. A `--live` run replaces
+the Jev column with what the API actually reported.
+
+| | Cost | Time | Tokens |
+| --- | ---: | ---: | ---: |
+| Without Jev — all 4 scenarios | $0.001759 | 36.3s | 6,274 |
+| With Jev — all 4 scenarios | $0.002621 | 81.2s | 8,918 |
+| **Jev vs without** | **−49.0%** | **−123.4%** | **−42.1%** |
+| Without Jev — the 3 bank scenarios | $0.000917 | 20.1s | 3,107 |
+| With Jev — the 3 bank scenarios | $0.000399 | 11.2s | 2,809 |
+| **Jev vs without** | **+56.5%** | **+44.3%** | **+9.6%** |
+
+Positive is better for Jev on every axis. Nine separate judgements is what the
+composite pattern is for, and it is also the case the bank shape cannot reach:
+the ad-hoc arm writes the state and the nine questions itself, which is why the
+whole-corpus row stays behind reasoning in context while the bank row does not.
 
 ### The rule
 
@@ -151,6 +176,7 @@ reference reasoning the baseline arm is priced from ships beside it as data.
 | **Coding** | a four-file performance change to an auth path the HTTP API and the CLI both import | what kind of change it is, how far it can reach, whether it needs a migration, how hard it must be checked, whether it does one thing |
 | **Testing** | one failure in an otherwise green run, on the branch whose change it covers | what caused it, how much the test actually asserts, whether it catches the regression, whether it needs integration |
 | **Exploring** | a one-line bug report against a 140k-line repo, no logs, no access to the failing environment | what kind of work, is the context sufficient, is external data needed, how costly an error is, is it ambiguous, is it decomposable |
+| **Comparing** | a save that fails one time in five, with three files that all write the same table | how likely each file holds the cause, how well each explains the exact symptom, how cheap a safe change in each would be |
 
 ### Prices used
 
@@ -168,7 +194,8 @@ comparison further in Jev's favour. Every figure is a flag:
 
 Jev's tokens **and round trips** are measured by --live. The baseline is
 **modelled** from the reference reasoning shipped beside each task in
-src/benchmark/items-coding.ts, items-testing.ts and items-exploring.ts — read it,
+src/benchmark/items-coding.ts, items-testing.ts, items-exploring.ts and
+items-comparing.ts — read it,
 disagree with it, replace it with --trace <file>, and re-run. Time is generated
 tokens divided by --tokens-per-second (default 50) plus the Jev round trip; that
 throughput is the assumption most worth checking against your own deployment.
@@ -205,6 +232,7 @@ Four surfaces over one ledger, so they cannot disagree:
 | `jev_check` | Noul | `noul` (0–1), boolean `verdict`, `route` |
 | `jev_ask` | mixed | every answer in one request, plus a per-answer route |
 | `jev_reason` | mixed | a built-in bank's answers, a one-line-per-decision summary, and the strictest route |
+| `jev_compare` | Score fan-out | a ranking of the candidates, each with a weighted `composite`, and the `winner` |
 | `jev_usage` | — | session token accounting by tool |
 
 Every tool returns the tokens the call cost, so the model can see the price of
@@ -303,7 +331,7 @@ without unmounting anything else.
 
 | Export | Contributes |
 | --- | --- |
-| `./tools` | the six tools above |
+| `./tools` | the seven tools above |
 | `./prompt` | a system-prompt section telling the agent to **delegate a decision instead of reasoning it out**, and which shapes to delegate. This is the adoption lever — see below |
 | `./skills` | `jev-narrow-judgements` — when a Jev call beats reasoning, how to keep the state small, how to read a route. The body is rendered from the live thresholds |
 | `./commands` | `/jev` — `usage` and `reset`, read from the ledger without touching the model |

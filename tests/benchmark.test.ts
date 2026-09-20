@@ -33,6 +33,9 @@ const FLOAT_DIGITS = 5
 /** The item the bank-shape assertions read. */
 const BANK_ITEM = CORPUS.find(item => item.bank !== undefined)
 
+/** How many corpus items a shipped bank covers. */
+const BANK_ITEM_COUNT = CORPUS.filter(item => item.bank !== undefined).length
+
 /**
  * Read the first item that a shipped bank covers.
  *
@@ -162,13 +165,13 @@ function testReportLeadsWithCostAndTime(): void {
   expect(markdown).toContain('Mode: **modelled**')
 }
 
-function testReportComparesBothShapesOnTheWholeCorpus(): void {
+function testReportPricesBothCallShapes(): void {
   expect.hasAssertions()
   const report = runModelledBenchmark()
-  // Every scenario is covered by a bank, so both tables price the same work.
-  // They differ only in the call shape.
+  // The bank table prices a strict subset of the corpus, and stays the better deal.
   expect(report.all.items).toBe(CORPUS.length)
-  expect(report.bank.items).toBe(report.all.items)
+  expect(report.bank.items).toBe(BANK_ITEM_COUNT)
+  expect(report.bank.items).toBeLessThan(report.all.items)
   expect(report.bank.cost.percent).toBeGreaterThan(report.all.cost.percent)
 }
 
@@ -193,6 +196,6 @@ describe('benchmark', () => {
 
   it('leads the report with cost and time', { timeout: TEST_TIMEOUT }, testReportLeadsWithCostAndTime)
 
-  it('prices both call shapes on the whole corpus', { timeout: TEST_TIMEOUT }, testReportComparesBothShapesOnTheWholeCorpus)
+  it('prices both call shapes over the corpus', { timeout: TEST_TIMEOUT }, testReportPricesBothCallShapes)
 })
 

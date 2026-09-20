@@ -51,6 +51,8 @@ interface ToolSwitches {
   ask?: boolean
   /** Publish `jev_reason` (the built-in reasoning banks). */
   reason?: boolean
+  /** Publish `jev_compare` (rank candidates on several dimensions). */
+  compare?: boolean
   /** Publish `jev_usage` (session token accounting). */
   usage?: boolean
 }
@@ -97,6 +99,8 @@ interface ResolvedToolSwitches {
   ask: boolean
   /** Publish `jev_reason`. */
   reason: boolean
+  /** Publish `jev_compare`. */
+  compare: boolean
   /** Publish `jev_usage`. */
   usage: boolean
 }
@@ -159,6 +163,7 @@ const Config: schema<Config> = schema.object({
     check: schema.boolean().default(true),
     ask: schema.boolean().default(true),
     reason: schema.boolean().default(true),
+    compare: schema.boolean().default(true),
     usage: schema.boolean().default(true),
   }),
 })
@@ -295,6 +300,7 @@ function resolveConfig(config: Config = {}): ResolvedConfig {
       check: or(tools.check, true),
       ask: or(tools.ask, true),
       reason: or(tools.reason, true),
+      compare: or(tools.compare, true),
       usage: or(tools.usage, true),
     },
   }

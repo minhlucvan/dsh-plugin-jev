@@ -24,7 +24,7 @@ import { createTestService } from './harness.ts'
 const TEST_TIMEOUT = 5000
 const EXPECTED_SINGLE_CALL = 1
 const FIRST_INDEX = 0
-const TOOL_COUNT = 6
+const TOOL_COUNT = 7
 const ROUTE_PATH = '/api/dsh-plugin-jev'
 const HEALTH_PATH = '/api/dsh-plugin-jev/health'
 const CATALOG_PATH = '/api/dsh-plugin-jev/catalog'
@@ -172,6 +172,7 @@ async function testRegistersOnlyEnabledTools(): Promise<void> {
       check: false,
       ask: false,
       reason: false,
+      compare: false,
       usage: false,
     },
   }

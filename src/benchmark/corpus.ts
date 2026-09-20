@@ -1,5 +1,5 @@
 /**
- * The benchmark corpus: three decisions a coding agent makes every day.
+ * The benchmark corpus: four decisions a coding agent makes every day.
  *
  * Each item is one state and the atomic questions a caller would ask about it,
  * together with the answer a careful reader would reach. The baselineNotes on
@@ -7,13 +7,15 @@
  * model has to emit when it decides these things itself, and they are what the
  * baseline cost is computed from.
  *
- * All three are covered by a shipped bank, so the report can price both Jev
- * call shapes on the same work.
+ * Three are covered by a shipped bank, so the report can price both Jev call
+ * shapes on the same work. The fourth is a nine-question fan-out no bank
+ * covers, so only the ad-hoc shape answers it.
  *
  * @module dsh-plugin-jev/benchmark/corpus
  */
 
 import type { JevJson, JevQuestion } from '#src/jev/contracts'
+import { COMPARING_SUSPECTS } from './items-comparing.ts'
 import { CODING_CHANGE } from './items-coding.ts'
 import { EXPLORING_TASK } from './items-exploring.ts'
 import { TESTING_FAILURE } from './items-testing.ts'
@@ -47,6 +49,7 @@ const CORPUS: readonly BenchmarkItem[] = [
   CODING_CHANGE,
   TESTING_FAILURE,
   EXPLORING_TASK,
+  COMPARING_SUSPECTS,
 ]
 
 /**

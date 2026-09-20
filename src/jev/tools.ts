@@ -13,6 +13,7 @@ import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 import type { JevService } from './service.ts'
 import { createCheckTool, createClassifyTool, createScoreTool } from './tool-primitives.ts'
 import { createAskTool, createReasonTool } from './tool-reasoning.ts'
+import { createCompareTool } from './tool-compare.ts'
 import { createUsageTool } from './tool-usage.ts'
 
 /**
@@ -38,6 +39,9 @@ function createJevTools(service: JevService): ToolDefinition[] {
   }
   if (switches.reason) {
     definitions.push(createReasonTool(service))
+  }
+  if (switches.compare) {
+    definitions.push(createCompareTool(service))
   }
   if (switches.usage) {
     definitions.push(createUsageTool(service))

@@ -30,6 +30,8 @@ interface JevToolSwitches {
   ask: boolean
   /** Publish jev_reason. */
   reason: boolean
+  /** Publish jev_compare. */
+  compare: boolean
   /** Publish jev_usage. */
   usage: boolean
 }
